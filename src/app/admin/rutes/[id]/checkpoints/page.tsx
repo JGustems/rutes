@@ -41,6 +41,15 @@ export default async function CheckpointsPage({
       `
     : [];
 
+  const tagsDisponibles = await sql`
+    select id, codi, tipus
+    from tags
+    where estat = 'actiu' and id not in (
+      select tag_id from checkpoints where tag_id is not null
+    )
+    order by tipus asc, codi asc
+  `;
+
   return (
     <main className="min-h-screen bg-fons p-6">
       <div className="max-w-2xl mx-auto">
@@ -63,7 +72,7 @@ export default async function CheckpointsPage({
             <p className="text-sm text-text-secundari italic">Encara no hi ha cap checkpoint.</p>
           )}
           {checkpointsAnada.map((cp: any) => (
-            <CheckpointItem key={cp.rc_id} checkpoint={cp} colorBadge="bg-pi-clar text-pi-fosc" />
+            <CheckpointItem key={cp.rc_id} checkpoint={cp} colorBadge="bg-pi-clar text-pi-fosc" tagsDisponibles={tagsDisponibles} />
           ))}
         </div>
 
@@ -77,7 +86,7 @@ export default async function CheckpointsPage({
                 <p className="text-sm text-text-secundari italic">Encara no hi ha cap checkpoint per aquest sentit.</p>
               )}
               {checkpointsTornada.map((cp: any) => (
-                <CheckpointItem key={cp.rc_id} checkpoint={cp} colorBadge="bg-cel-clar text-cel-fosc" />
+                <CheckpointItem key={cp.rc_id} checkpoint={cp} colorBadge="bg-cel-clar text-cel-fosc" tagsDisponibles={tagsDisponibles} />
               ))}
             </div>
           </>
