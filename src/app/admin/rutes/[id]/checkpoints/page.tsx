@@ -23,23 +23,35 @@ export default async function CheckpointsPage({
   const ruta = rutes[0];
   if (!ruta) notFound();
 
-  const checkpointsAnada = await sql`
-    select rc.id as rc_id, rc.ordre, rc.es_inici, rc.es_fi, c.id, c.nom, c.latitud, c.longitud, c.tag_id
+  const checkpointsAnadaRaw = await sql`
+    select rc.id as rc_id, rc.ordre, rc.es_inici, rc.es_fi, c.id, c.nom, c.latitud, c.longitud, c.tag_id,
+      t.codi as tag_codi, t.tipus as tag_tipus
     from route_checkpoints rc
     join checkpoints c on c.id = rc.checkpoint_id
+    left join tags t on t.id = c.tag_id
     where rc.route_id = ${id} and rc.sentit = 'anada'
     order by rc.ordre asc
   `;
+  const checkpointsAnada = checkpointsAnadaRaw.map((cp: any) => ({
+    ...cp,
+    tagAssignat: cp.tag_id ? { id: cp.tag_id, codi: cp.tag_codi, tipus: cp.tag_tipus } : null,
+  }));
 
-  const checkpointsTornada = ruta.bidireccional
+  const checkpointsTornadaRaw = ruta.bidireccional
     ? await sql`
-        select rc.id as rc_id, rc.ordre, rc.es_inici, rc.es_fi, c.id, c.nom, c.latitud, c.longitud, c.tag_id
+        select rc.id as rc_id, rc.ordre, rc.es_inici, rc.es_fi, c.id, c.nom, c.latitud, c.longitud, c.tag_id,
+          t.codi as tag_codi, t.tipus as tag_tipus
         from route_checkpoints rc
         join checkpoints c on c.id = rc.checkpoint_id
+        left join tags t on t.id = c.tag_id
         where rc.route_id = ${id} and rc.sentit = 'tornada'
         order by rc.ordre asc
       `
     : [];
+  const checkpointsTornada = checkpointsTornadaRaw.map((cp: any) => ({
+    ...cp,
+    tagAssignat: cp.tag_id ? { id: cp.tag_id, codi: cp.tag_codi, tipus: cp.tag_tipus } : null,
+  }));
 
   // Tags actius que encara no estan assignats a cap checkpoint
   const tagsDisponiblesRaw = await sql`
@@ -74,7 +86,12 @@ export default async function CheckpointsPage({
             <p className="text-sm text-text-secundari italic">Encara no hi ha cap checkpoint.</p>
           )}
           {checkpointsAnada.map((cp: any) => (
-            <CheckpointItem key={cp.rc_id} checkpoint={cp} colorBadge="bg-pi-clar text-pi-fosc" tagsDisponibles={tagsDisponibles} />
+            <CheckpointItem
+              key={cp.rc_id}
+              checkpoint={cp}
+              colorBadge="bg-pi-clar text-pi-fosc"
+              tagsDisponibles={tagsDisponibles}
+            />
           ))}
         </div>
 
@@ -88,7 +105,12 @@ export default async function CheckpointsPage({
                 <p className="text-sm text-text-secundari italic">Encara no hi ha cap checkpoint per aquest sentit.</p>
               )}
               {checkpointsTornada.map((cp: any) => (
-                <CheckpointItem key={cp.rc_id} checkpoint={cp} colorBadge="bg-cel-clar text-cel-fosc" tagsDisponibles={tagsDisponibles} />
+                <CheckpointItem
+                  key={cp.rc_id}
+                  checkpoint={cp}
+                  colorBadge="bg-cel-clar text-cel-fosc"
+                  tagsDisponibles={tagsDisponibles}
+                />
               ))}
             </div>
           </>
