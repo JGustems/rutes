@@ -1,18 +1,9 @@
 import { sql } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import nextDynamic from "next/dynamic";
+import RouteMap from "@/components/route-map-wrapper";
 
 export const dynamic = "force-dynamic";
-
-const RouteMap = nextDynamic(() => import("@/components/route-map"), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-64 rounded-card bg-fons border border-vora flex items-center justify-center">
-      <p className="text-sm text-text-secundari">Carregant mapa...</p>
-    </div>
-  ),
-});
 
 const CATEGORIA_LABELS: Record<string, string> = {
   km_vertical: "Km vertical",
