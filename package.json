@@ -14,7 +14,9 @@
     "react-dom": "19.0.0",
     "@neondatabase/serverless": "^0.9.4",
     "next-auth": "5.0.0-beta.25",
-    "bcryptjs": "^2.4.3"
+    "bcryptjs": "^2.4.3",
+    "@tmcw/togeojson": "^5.8.1",
+    "@xmldom/xmldom": "^0.8.10"
   },
   "devDependencies": {
     "typescript": "^5.5.4",
