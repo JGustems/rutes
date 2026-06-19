@@ -172,6 +172,7 @@ export default function CheckpointItem({
             </p>
             <p className="text-xs text-text-secundari">
               {checkpoint.latitud.toFixed(5)}, {checkpoint.longitud.toFixed(5)}
+              {" "}· debug tag_id: {JSON.stringify(checkpoint.tag_id)}
             </p>
           </div>
         </div>
