@@ -41,7 +41,8 @@ export default async function CheckpointsPage({
       `
     : [];
 
-  const tagsDisponibles = await sql`
+  // Tags actius que encara no estan assignats a cap checkpoint
+  const tagsDisponiblesRaw = await sql`
     select id, codi, tipus
     from tags
     where estat = 'actiu' and id not in (
@@ -49,6 +50,7 @@ export default async function CheckpointsPage({
     )
     order by tipus asc, codi asc
   `;
+  const tagsDisponibles = tagsDisponiblesRaw as { id: string; codi: string; tipus: string }[];
 
   return (
     <main className="min-h-screen bg-fons p-6">
