@@ -4,6 +4,7 @@ import { sql } from "@/lib/db";
 import Link from "next/link";
 import CheckpointForm from "./checkpoint-form";
 import CheckpointItem from "./checkpoint-item";
+import TrackForm from "./track-form";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,10 @@ export default async function CheckpointsPage({
   `;
   const tagsDisponibles = tagsDisponiblesRaw as { id: string; codi: string; tipus: string }[];
 
+  // Comprovar si la ruta ja te un track carregat
+  const trackRows = await sql`select route_id from route_tracks where route_id = ${id} limit 1`;
+  const teTrack = trackRows.length > 0;
+
   return (
     <main className="min-h-screen bg-fons p-6">
       <div className="max-w-2xl mx-auto">
@@ -74,9 +79,11 @@ export default async function CheckpointsPage({
             ← Rutes
           </Link>
         </div>
-        <p className="text-sm text-text-secundari mb-8">
+        <p className="text-sm text-text-secundari mb-6">
           Punts de control {ruta.bidireccional ? "· Ruta bidireccional" : ""}
         </p>
+
+        <TrackForm routeId={id} wikilocUrlActual={ruta.wikiloc_url} teTrack={teTrack} />
 
         <h2 className="text-sm font-medium text-text-secundari uppercase tracking-wide mb-3">
           {ruta.bidireccional ? "Sentit anada" : "Punts de control"}
@@ -86,12 +93,7 @@ export default async function CheckpointsPage({
             <p className="text-sm text-text-secundari italic">Encara no hi ha cap checkpoint.</p>
           )}
           {checkpointsAnada.map((cp: any) => (
-            <CheckpointItem
-              key={cp.rc_id}
-              checkpoint={cp}
-              colorBadge="bg-pi-clar text-pi-fosc"
-              tagsDisponibles={tagsDisponibles}
-            />
+            <CheckpointItem key={cp.rc_id} checkpoint={cp} colorBadge="bg-pi-clar text-pi-fosc" tagsDisponibles={tagsDisponibles} />
           ))}
         </div>
 
@@ -105,12 +107,7 @@ export default async function CheckpointsPage({
                 <p className="text-sm text-text-secundari italic">Encara no hi ha cap checkpoint per aquest sentit.</p>
               )}
               {checkpointsTornada.map((cp: any) => (
-                <CheckpointItem
-                  key={cp.rc_id}
-                  checkpoint={cp}
-                  colorBadge="bg-cel-clar text-cel-fosc"
-                  tagsDisponibles={tagsDisponibles}
-                />
+                <CheckpointItem key={cp.rc_id} checkpoint={cp} colorBadge="bg-cel-clar text-cel-fosc" tagsDisponibles={tagsDisponibles} />
               ))}
             </div>
           </>
