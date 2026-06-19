@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+type Tag = {
+  id: string;
+  codi: string;
+  tipus: string;
+};
+
 type Checkpoint = {
   rc_id: string;
   id: string;
@@ -18,9 +24,11 @@ type Checkpoint = {
 export default function CheckpointItem({
   checkpoint,
   colorBadge,
+  tagsDisponibles,
 }: {
   checkpoint: Checkpoint;
   colorBadge: string;
+  tagsDisponibles: Tag[];
 }) {
   const router = useRouter();
   const [editant, setEditant] = useState(false);
@@ -65,7 +73,10 @@ export default function CheckpointItem({
     });
     const data = await res.json();
     setCarregant(false);
-    if (!res.ok) { setError(data.error ?? "Error en desar els canvis"); return; }
+    if (!res.ok) {
+      setError(data.error ?? "Error en desar els canvis");
+      return;
+    }
     setEditant(false);
     router.refresh();
   }
@@ -78,6 +89,23 @@ export default function CheckpointItem({
     if (!res.ok) {
       const data = await res.json();
       setError(data.error ?? "Error en esborrar");
+      return;
+    }
+    router.refresh();
+  }
+
+  async function handleTagChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const nouTagId = e.target.value || null;
+    setCarregant(true);
+    const res = await fetch(`/api/admin/checkpoints/${checkpoint.id}/tag`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tagId: nouTagId }),
+    });
+    setCarregant(false);
+    if (!res.ok) {
+      const data = await res.json();
+      setError(data.error ?? "Error en assignar el tag");
       return;
     }
     router.refresh();
@@ -130,27 +158,47 @@ export default function CheckpointItem({
   }
 
   return (
-    <div className="bg-superficie border border-vora rounded-card px-4 py-3 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <span className={`text-xs font-medium rounded-full w-6 h-6 flex items-center justify-center shrink-0 ${colorBadge}`}>
-          {checkpoint.ordre}
-        </span>
-        <div>
-          <p className="text-sm text-text-principal">
-            {checkpoint.nom}
-            {checkpoint.es_inici && <span className="text-xs text-pi ml-2">(Inici)</span>}
-            {checkpoint.es_fi && <span className="text-xs text-terra ml-2">(Fi)</span>}
-          </p>
-          <p className="text-xs text-text-secundari">
-            {checkpoint.latitud.toFixed(5)}, {checkpoint.longitud.toFixed(5)}
-            {checkpoint.tag_id ? " · Tag assignat" : " · Sense tag"}
-          </p>
+    <div className="bg-superficie border border-vora rounded-card px-4 py-3 flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className={`text-xs font-medium rounded-full w-6 h-6 flex items-center justify-center shrink-0 ${colorBadge}`}>
+            {checkpoint.ordre}
+          </span>
+          <div>
+            <p className="text-sm text-text-principal">
+              {checkpoint.nom}
+              {checkpoint.es_inici && <span className="text-xs text-pi ml-2">(Inici)</span>}
+              {checkpoint.es_fi && <span className="text-xs text-terra ml-2">(Fi)</span>}
+            </p>
+            <p className="text-xs text-text-secundari">
+              {checkpoint.latitud.toFixed(5)}, {checkpoint.longitud.toFixed(5)}
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-3 shrink-0">
+          <button onClick={() => setEditant(true)} className="text-xs text-pi font-medium hover:underline">Editar</button>
+          <button onClick={handleEsborrar} disabled={carregant} className="text-xs text-alerta font-medium hover:underline disabled:opacity-50">Esborrar</button>
         </div>
       </div>
-      <div className="flex gap-3 shrink-0">
-        <button onClick={() => setEditant(true)} className="text-xs text-pi font-medium hover:underline">Editar</button>
-        <button onClick={handleEsborrar} disabled={carregant} className="text-xs text-alerta font-medium hover:underline disabled:opacity-50">Esborrar</button>
+
+      <div className="flex items-center gap-2 pl-9">
+        <label className="text-xs text-text-secundari shrink-0">Tag:</label>
+        <select
+          value={checkpoint.tag_id ?? ""}
+          onChange={handleTagChange}
+          disabled={carregant}
+          className="text-xs border border-vora rounded-lg px-2 py-1 text-text-principal bg-fons focus:outline-none focus:border-pi flex-1"
+        >
+          <option value="">Sense tag assignat</option>
+          {tagsDisponibles.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.tipus.toUpperCase()} · {t.codi}
+            </option>
+          ))}
+        </select>
       </div>
+
+      {error && <p className="text-xs text-alerta pl-9">{error}</p>}
     </div>
   );
 }
