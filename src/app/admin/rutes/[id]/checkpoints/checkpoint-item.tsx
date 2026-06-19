@@ -19,6 +19,7 @@ type Checkpoint = {
   es_inici: boolean;
   es_fi: boolean;
   tag_id: string | null;
+  tagAssignat: Tag | null;
 };
 
 export default function CheckpointItem({
@@ -111,6 +112,10 @@ export default function CheckpointItem({
     router.refresh();
   }
 
+  const opcions = checkpoint.tagAssignat
+    ? [checkpoint.tagAssignat, ...tagsDisponibles]
+    : tagsDisponibles;
+
   if (editant) {
     return (
       <div className="bg-superficie border border-pi rounded-card px-4 py-4 flex flex-col gap-3">
@@ -172,7 +177,6 @@ export default function CheckpointItem({
             </p>
             <p className="text-xs text-text-secundari">
               {checkpoint.latitud.toFixed(5)}, {checkpoint.longitud.toFixed(5)}
-              {" "}· debug tag_id: {JSON.stringify(checkpoint.tag_id)}
             </p>
           </div>
         </div>
@@ -191,7 +195,7 @@ export default function CheckpointItem({
           className="text-xs border border-vora rounded-lg px-2 py-1 text-text-principal bg-fons focus:outline-none focus:border-pi flex-1"
         >
           <option value="">Sense tag assignat</option>
-          {tagsDisponibles.map((t) => (
+          {opcions.map((t) => (
             <option key={t.id} value={t.id}>
               {t.tipus.toUpperCase()} · {t.codi}
             </option>
