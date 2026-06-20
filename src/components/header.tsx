@@ -9,15 +9,15 @@ export default async function Header() {
 
   return (
     <header className="bg-superficie border-b border-vora">
-      <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+      <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
         <Link href="/" className="text-base font-medium text-text-principal flex items-center gap-1.5 shrink-0">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-pi">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-pi shrink-0">
             <path d="M3 20L9 8L12 14L15 9L21 20H3Z" fill="currentColor" />
           </svg>
           <span className="hidden sm:inline">Rutes Muntanya</span>
         </Link>
 
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-1 ml-auto">
           <NavLinks isAdmin={isAdmin} isLoggedIn={!!session?.user} />
           {session?.user ? (
             <SignOutButton />
