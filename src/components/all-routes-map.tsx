@@ -20,14 +20,12 @@ const COLOR_PER_CATEGORIA: Record<string, string> = {
   carretera: "#0F4D66",
 };
 
-// Tolerancia per agrupar punts de sortida, en metres reals
-const TOLERANCIA_METRES = 200;
+const TOLERANCIA_GRUP_METRES = 200;
+// Radi per detectar si un clic afecta a mes d'un track alhora
+const TOLERANCIA_CLIC_METRES = 20;
 
-// Distancia real entre dos punts lat/lon fent servir la formula
-// de Haversine (en metres). Aixo evita l'error de comparar graus
-// directament, que varien de mida real segons la latitud.
 function distanciaMetres(a: [number, number], b: [number, number]): number {
-  const R = 6371000; // radi de la Terra en metres
+  const R = 6371000;
   const lat1 = (a[0] * Math.PI) / 180;
   const lat2 = (b[0] * Math.PI) / 180;
   const deltaLat = ((b[0] - a[0]) * Math.PI) / 180;
@@ -52,6 +50,35 @@ function obtenirPrimerPunt(geojson: any): [number, number] | null {
   } catch {
     return null;
   }
+}
+
+// Extreu totes les coordenades [lat, lon] d'un geojson, per poder
+// comprovar proximitat amb un punt de clic
+function extreureTotsPunts(geojson: any): [number, number][] {
+  const punts: [number, number][] = [];
+  function processar(geom: any) {
+    if (!geom) return;
+    if (geom.type === "LineString") {
+      for (const c of geom.coordinates) punts.push([c[1], c[0]]);
+    } else if (geom.type === "MultiLineString") {
+      for (const linia of geom.coordinates) {
+        for (const c of linia) punts.push([c[1], c[0]]);
+      }
+    }
+  }
+  if (geojson?.type === "FeatureCollection") {
+    for (const f of geojson.features) processar(f.geometry);
+  } else if (geojson?.type === "Feature") {
+    processar(geojson.geometry);
+  } else {
+    processar(geojson);
+  }
+  return punts;
+}
+
+function trackPassaPerPunt(geojson: any, punt: [number, number]): boolean {
+  const punts = extreureTotsPunts(geojson);
+  return punts.some((p) => distanciaMetres(p, punt) < TOLERANCIA_CLIC_METRES);
 }
 
 function iconaGrup(numRutes: number, seleccionat: boolean) {
@@ -98,8 +125,6 @@ function AjustarVistaGlobal({ rutes }: { rutes: RutaAmbTrack[] }) {
   return null;
 }
 
-// Component que escolta clics al mapa (no als tracks/marcadors) per
-// desseleccionar la ruta activa
 function DesseleccionarEnClicarFora({ onClickMapa }: { onClickMapa: () => void }) {
   useMapEvents({
     click: () => {
@@ -112,8 +137,13 @@ function DesseleccionarEnClicarFora({ onClickMapa }: { onClickMapa: () => void }
 export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
   const centerDefecte: [number, number] = [41.5912, 1.5209];
   const [rutaSeleccionada, setRutaSeleccionada] = useState<string | null>(null);
+  // Quan un clic afecta a mes d'un track, guardem les opcions aqui
+  // per mostrar un selector flotant
+  const [opcionsClic, setOpcionsClic] = useState<{
+    posicio: [number, number];
+    rutes: RutaAmbTrack[];
+  } | null>(null);
 
-  // Agrupar rutes pel seu punt de sortida (tolerancia en metres reals)
   const grups = useMemo(() => {
     const llistaGrups: { punt: [number, number]; rutes: RutaAmbTrack[] }[] = [];
 
@@ -122,7 +152,7 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
       if (!punt) continue;
 
       const grupExistent = llistaGrups.find(
-        (g) => distanciaMetres(g.punt, punt) < TOLERANCIA_METRES
+        (g) => distanciaMetres(g.punt, punt) < TOLERANCIA_GRUP_METRES
       );
 
       if (grupExistent) {
@@ -134,6 +164,20 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
 
     return llistaGrups;
   }, [rutes]);
+
+  function handleClickTrack(puntClic: [number, number]) {
+    const coincidents = rutes.filter(
+      (r) => r.geojson && trackPassaPerPunt(r.geojson, puntClic)
+    );
+
+    if (coincidents.length <= 1) {
+      setRutaSeleccionada(coincidents[0]?.id ?? null);
+      setOpcionsClic(null);
+    } else {
+      // Mes d'un track coincideix en aquest punt: cal que l'usuari trii
+      setOpcionsClic({ posicio: puntClic, rutes: coincidents });
+    }
+  }
 
   return (
     <div className="w-full h-72 rounded-card overflow-hidden border border-vora mb-6">
@@ -163,10 +207,9 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
               }}
               eventHandlers={{
                 click: (e: any) => {
-                  // Evitar que l'event arribi tambe al listener del
-                  // mapa, que desseleccionaria immediatament
-                  if (e.originalEvent) e.originalEvent._aturatPerTrack = true;
-                  setRutaSeleccionada(r.id);
+                  L.DomEvent.stopPropagation(e);
+                  const punt: [number, number] = [e.latlng.lat, e.latlng.lng];
+                  handleClickTrack(punt);
                 },
               }}
             />
@@ -183,7 +226,7 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
               position={grup.punt}
               icon={iconaGrup(numRutes, teSeleccionada)}
             >
-              <Popup minWidth={180}>
+              <Popup minWidth={180} className="popup-translucid">
                 {numRutes === 1 ? (
                   <div className="flex flex-col gap-2">
                     <p className="text-sm font-medium">{grup.rutes[0].nom}</p>
@@ -228,9 +271,50 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
           );
         })}
 
+        {opcionsClic && (
+          <Popup
+            position={opcionsClic.posicio}
+            eventHandlers={{ remove: () => setOpcionsClic(null) }}
+            className="popup-translucid"
+          >
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-text-secundari mb-1">
+                Per aquí passen {opcionsClic.rutes.length} rutes. Quina vols veure?
+              </p>
+              {opcionsClic.rutes.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => {
+                    setRutaSeleccionada(r.id);
+                    setOpcionsClic(null);
+                  }}
+                  className="text-xs text-left text-pi font-medium hover:underline"
+                >
+                  {r.nom}
+                </button>
+              ))}
+            </div>
+          </Popup>
+        )}
+
         <AjustarVistaGlobal rutes={rutes} />
-        <DesseleccionarEnClicarFora onClickMapa={() => setRutaSeleccionada(null)} />
+        <DesseleccionarEnClicarFora
+          onClickMapa={() => {
+            setRutaSeleccionada(null);
+            setOpcionsClic(null);
+          }}
+        />
       </MapContainer>
+
+      <style jsx global>{`
+        .popup-translucid .leaflet-popup-content-wrapper {
+          background: rgba(255, 255, 255, 0.88);
+          backdrop-filter: blur(2px);
+        }
+        .popup-translucid .leaflet-popup-tip {
+          background: rgba(255, 255, 255, 0.88);
+        }
+      `}</style>
     </div>
   );
 }
