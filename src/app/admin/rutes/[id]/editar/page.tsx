@@ -17,8 +17,8 @@ export default async function EditarRutaPage({
 
   const { id } = await params;
 
-  const rutes = await sql`select * from routes where id = ${id} limit 1`;
-  const ruta = rutes[0];
+const rutes = await sql`select * from routes where id = ${id} limit 1`;
+  const ruta = rutes[0] as any;
   if (!ruta) notFound();
 
   return (
