@@ -6,11 +6,19 @@ const sql = neon(process.env.DATABASE_URL!);
 
 export async function POST(req: Request) {
   try {
-    const { email, password, nom } = await req.json();
+    const { email, password, nom, acceptaTermes } = await req.json();
 
+    // Validacions basiques
     if (!email || !password || !nom) {
       return NextResponse.json(
         { error: "Cal omplir tots els camps" },
+        { status: 400 }
+      );
+    }
+
+    if (!acceptaTermes) {
+      return NextResponse.json(
+        { error: "Cal acceptar les condicions d'ús per crear un compte" },
         { status: 400 }
       );
     }
