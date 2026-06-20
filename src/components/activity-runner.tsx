@@ -10,6 +10,7 @@ import {
   seguentCheckpointEsperat,
   activitatCompletada,
 } from "@/lib/activity-storage";
+import QrScannerButton from "./qr-scanner-button";
 
 type CheckpointInfo = {
   checkpointId: string;
@@ -61,7 +62,7 @@ export default function ActivityRunner({
 
   const mostrarMissatge = useCallback((tipus: "ok" | "error", text: string) => {
     setMissatge({ tipus, text });
-    setTimeout(() => setMissatge(null), 4000);
+    setTimeout(() => setMissatge(null), 15000);
   }, []);
 
   function registrarPas(codiDetectatRaw: string, font: "nfc" | "ble" | "manual") {
@@ -77,10 +78,7 @@ export default function ActivityRunner({
       }
 
       if (normalitzarCodi(esperat.tagCodi ?? "") !== codiDetectat) {
-        mostrarMissatge(
-          "error",
-          "Aquest codi no correspon al següent punt de control esperat"
-        );
+        mostrarMissatge("error", "Aquest codi no correspon al següent punt de control esperat");
         return actual;
       }
 
@@ -236,9 +234,12 @@ export default function ActivityRunner({
               {nfcDisponible ? "Escoltar NFC" : "NFC no disponible en aquest navegador"}
             </button>
 
-            <button onClick={connectarBLE} disabled={bleConnectant} className="w-full bg-cel text-white rounded-lg py-2.5 text-sm font-medium hover:bg-cel-fosc transition-colors disabled:opacity-50">
-              {bleConnectant ? "Connectant..." : "Connectar amb Bluetooth"}
-            </button>
+            <div className="flex gap-2">
+              <button onClick={connectarBLE} disabled={bleConnectant} className="flex-1 bg-cel text-white rounded-lg py-2.5 text-sm font-medium hover:bg-cel-fosc transition-colors disabled:opacity-50">
+                {bleConnectant ? "Connectant..." : "Connectar Bluetooth"}
+              </button>
+              <QrScannerButton onScan={(codi) => registrarPas(codi, "manual")} />
+            </div>
 
             <div className="flex gap-2">
               <input
