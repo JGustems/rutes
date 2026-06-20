@@ -190,14 +190,35 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
 
-        {/* Capa invisible mes gruixuda nomes per ampliar la zona
-            clicable de cada track, sense canviar-ne l'aspecte visual */}
+       {/* Capa visible, nomes pintura, sense interaccio propia */}
+        {rutes.map((r) =>
+          r.geojson ? (
+            <GeoJSON
+              key={r.id}
+              data={r.geojson}
+              style={{
+                color:
+                  rutaSeleccionada === r.id
+                    ? "#B5533C"
+                    : COLOR_PER_CATEGORIA[r.categoria] ?? "#C97D4A",
+                weight: rutaSeleccionada === r.id ? 5 : 3,
+                opacity: rutaSeleccionada && rutaSeleccionada !== r.id ? 0.55 : 0.85,
+              }}
+              interactive={false}
+            />
+          ) : null
+        )}
+
+        {/* Capa invisible mes gruixuda PER SOBRE, nomes per ampliar
+            la zona clicable de cada track. En anar per sobre de tot,
+            sempre es ella qui rep el clic, sense cap interferencia
+            de la capa visual de sota. */}
         {rutes.map((r) =>
           r.geojson ? (
             <GeoJSON
               key={`hitbox-${r.id}`}
               data={r.geojson}
-              style={{ color: "#000", weight: 18, opacity: 0 }}
+              style={{ color: "#000", weight: 24, opacity: 0 }}
               eventHandlers={{
                 click: (e: any) => {
                   L.DomEvent.stopPropagation(e);
