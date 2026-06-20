@@ -18,7 +18,8 @@
     "@tmcw/togeojson": "^5.8.1",
     "@xmldom/xmldom": "^0.8.10",
     "leaflet": "^1.9.4",
-    "react-leaflet": "^4.2.1"
+    "react-leaflet": "^4.2.1",
+    "qr-scanner": "^1.4.2"
   },
   "devDependencies": {
     "typescript": "^5.5.4",
