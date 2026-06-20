@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -20,9 +20,26 @@ const COLOR_PER_CATEGORIA: Record<string, string> = {
   carretera: "#0F4D66",
 };
 
-// Tolerancia per considerar dos punts "el mateix lloc" (en graus,
-// aprox. 30-40 metres)
-const TOLERANCIA = 0.0004;
+// Tolerancia per agrupar punts de sortida, en metres reals
+const TOLERANCIA_METRES = 200;
+
+// Distancia real entre dos punts lat/lon fent servir la formula
+// de Haversine (en metres). Aixo evita l'error de comparar graus
+// directament, que varien de mida real segons la latitud.
+function distanciaMetres(a: [number, number], b: [number, number]): number {
+  const R = 6371000; // radi de la Terra en metres
+  const lat1 = (a[0] * Math.PI) / 180;
+  const lat2 = (b[0] * Math.PI) / 180;
+  const deltaLat = ((b[0] - a[0]) * Math.PI) / 180;
+  const deltaLon = ((b[1] - a[1]) * Math.PI) / 180;
+
+  const sinLat = Math.sin(deltaLat / 2);
+  const sinLon = Math.sin(deltaLon / 2);
+  const x = sinLat * sinLat + Math.cos(lat1) * Math.cos(lat2) * sinLon * sinLon;
+  const c = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+
+  return R * c;
+}
 
 function obtenirPrimerPunt(geojson: any): [number, number] | null {
   if (!geojson) return null;
@@ -81,11 +98,22 @@ function AjustarVistaGlobal({ rutes }: { rutes: RutaAmbTrack[] }) {
   return null;
 }
 
+// Component que escolta clics al mapa (no als tracks/marcadors) per
+// desseleccionar la ruta activa
+function DesseleccionarEnClicarFora({ onClickMapa }: { onClickMapa: () => void }) {
+  useMapEvents({
+    click: () => {
+      onClickMapa();
+    },
+  });
+  return null;
+}
+
 export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
   const centerDefecte: [number, number] = [41.5912, 1.5209];
   const [rutaSeleccionada, setRutaSeleccionada] = useState<string | null>(null);
 
-  // Agrupar rutes pel seu punt de sortida (amb tolerancia)
+  // Agrupar rutes pel seu punt de sortida (tolerancia en metres reals)
   const grups = useMemo(() => {
     const llistaGrups: { punt: [number, number]; rutes: RutaAmbTrack[] }[] = [];
 
@@ -94,9 +122,7 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
       if (!punt) continue;
 
       const grupExistent = llistaGrups.find(
-        (g) =>
-          Math.abs(g.punt[0] - punt[0]) < TOLERANCIA &&
-          Math.abs(g.punt[1] - punt[1]) < TOLERANCIA
+        (g) => distanciaMetres(g.punt, punt) < TOLERANCIA_METRES
       );
 
       if (grupExistent) {
@@ -133,10 +159,15 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
                     ? "#B5533C"
                     : COLOR_PER_CATEGORIA[r.categoria] ?? "#C97D4A",
                 weight: rutaSeleccionada === r.id ? 5 : 3,
-                opacity: rutaSeleccionada && rutaSeleccionada !== r.id ? 0.3 : 0.8,
+                opacity: rutaSeleccionada && rutaSeleccionada !== r.id ? 0.55 : 0.85,
               }}
               eventHandlers={{
-                click: () => setRutaSeleccionada(r.id),
+                click: (e: any) => {
+                  // Evitar que l'event arribi tambe al listener del
+                  // mapa, que desseleccionaria immediatament
+                  if (e.originalEvent) e.originalEvent._aturatPerTrack = true;
+                  setRutaSeleccionada(r.id);
+                },
               }}
             />
           ) : null
@@ -198,6 +229,7 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
         })}
 
         <AjustarVistaGlobal rutes={rutes} />
+        <DesseleccionarEnClicarFora onClickMapa={() => setRutaSeleccionada(null)} />
       </MapContainer>
     </div>
   );
