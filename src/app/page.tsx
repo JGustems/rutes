@@ -32,16 +32,13 @@ export default async function HomePage() {
     order by r.creat_el desc
   `;
 
-  return (
+ return (
     <main className="min-h-screen bg-fons">
       <div className="max-w-2xl mx-auto px-4 py-6">
 
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-medium text-text-principal">Rutes Muntanya</h1>
-          <Link href="/auth/login" className="text-sm text-pi font-medium hover:underline">
-            Inicia sessió
-          </Link>
-        </div>
+        <h1 className="text-xl font-medium text-text-principal mb-6">
+          Totes les rutes
+        </h1>
 
         {rutes.length === 0 ? (
           <div className="bg-superficie border border-vora rounded-card p-12 text-center">
