@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Header from "@/components/header";
 
 export const metadata: Metadata = {
   title: "Rutes Muntanya",
@@ -14,6 +15,7 @@ export default function RootLayout({
   return (
     <html lang="ca">
       <body className="bg-fons text-text-principal min-h-screen">
+        <Header />
         {children}
       </body>
     </html>
