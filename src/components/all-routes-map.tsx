@@ -230,24 +230,7 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
           ) : null
         )}
 
-        {/* Capa visible, nomes pintura, sense interaccio propia */}
-        {rutes.map((r) =>
-          r.geojson ? (
-            <GeoJSON
-              key={r.id}
-              data={r.geojson}
-              style={{
-                color:
-                  rutaSeleccionada === r.id
-                    ? "#B5533C"
-                    : COLOR_PER_CATEGORIA[r.categoria] ?? "#C97D4A",
-                weight: rutaSeleccionada === r.id ? 5 : 3,
-                opacity: rutaSeleccionada && rutaSeleccionada !== r.id ? 0.55 : 0.85,
-              }}
-              interactive={false}
-            />
-          ) : null
-        )}
+       
 
         {grups.map((grup, idx) => {
           const numRutes = grup.rutes.length;
