@@ -75,8 +75,10 @@ function extreureTotsPunts(geojson: any): [number, number][] {
 
 function trackPassaPerPunt(geojson: any, punt: [number, number]): boolean {
   const punts = extreureTotsPunts(geojson);
-  console.log("Track te", punts.length, "punts. Exemple primer punt:", punts[0], "| Tipus geojson:", geojson?.type, "| Tipus geometria:", geojson?.features?.[0]?.geometry?.type ?? geojson?.geometry?.type);
-  return punts.some((p) => distanciaMetres(p, punt) < TOLERANCIA_CLIC_METRES);
+  const distancies = punts.map((p) => distanciaMetres(p, punt));
+  const minDist = Math.min(...distancies);
+  console.log("Distancia minima trobada en aquest track:", minDist.toFixed(1), "metres");
+  return minDist < TOLERANCIA_CLIC_METRES;
 }
 
 function iconaGrup(numRutes: number, seleccionat: boolean) {
