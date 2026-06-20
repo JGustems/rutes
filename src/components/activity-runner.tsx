@@ -21,6 +21,10 @@ type CheckpointInfo = {
   tagTipus: "nfc" | "ble" | null;
 };
 
+function normalitzarCodi(codi: string): string {
+  return codi.trim().toLowerCase().replace(/[\s:.-]/g, "");
+}
+
 export default function ActivityRunner({
   routeId,
   routeNom,
@@ -46,12 +50,23 @@ export default function ActivityRunner({
     setNfcDisponible(typeof window !== "undefined" && "NDEFReader" in window);
   }, [routeId]);
 
+  const [, forcarActualitzacio] = useState(0);
+  useEffect(() => {
+    if (!activitat || activitatCompletada(activitat)) return;
+    const interval = setInterval(() => {
+      forcarActualitzacio((n) => n + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [activitat]);
+
   const mostrarMissatge = useCallback((tipus: "ok" | "error", text: string) => {
     setMissatge({ tipus, text });
     setTimeout(() => setMissatge(null), 4000);
   }, []);
 
-  function registrarPas(codiDetectat: string, font: "nfc" | "ble" | "manual") {
+  function registrarPas(codiDetectatRaw: string, font: "nfc" | "ble" | "manual") {
+    const codiDetectat = normalitzarCodi(codiDetectatRaw);
+
     setActivitat((actual) => {
       if (!actual) return actual;
 
@@ -61,19 +76,23 @@ export default function ActivityRunner({
         return actual;
       }
 
-      if (esperat.tagCodi !== codiDetectat) {
+      if (normalitzarCodi(esperat.tagCodi ?? "") !== codiDetectat) {
         mostrarMissatge("error", "Aquest codi no correspon al següent punt de control esperat");
         return actual;
       }
 
+      const araIso = new Date().toISOString();
+      const esPrimerPas = actual.passos.length === 0;
+
       const nouPas = {
         checkpointId: esperat.checkpointId,
-        detectatEl: new Date().toISOString(),
+        detectatEl: araIso,
         font,
       };
 
       const actualitzada: ActivitatLocal = {
         ...actual,
+        iniciadaEl: esPrimerPas ? araIso : actual.iniciadaEl,
         passos: [...actual.passos, nouPas],
       };
 
@@ -92,7 +111,7 @@ export default function ActivityRunner({
       localId: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
       routeId,
       sentit: "anada",
-      iniciadaEl: new Date().toISOString(),
+      iniciadaEl: null,
       fontInici: font,
       passos: [],
       checkpointsEsperat,
@@ -114,7 +133,7 @@ export default function ActivityRunner({
       return;
     }
     try {
-      // @ts-ignore - Web NFC API no te tipus oficials encara
+      // @ts-ignore
       const reader = new (window as any).NDEFReader();
       await reader.scan();
       mostrarMissatge("ok", "Escoltant NFC... acosta el mòbil al tag");
@@ -134,9 +153,7 @@ export default function ActivityRunner({
     }
     setBleConnectant(true);
     try {
-      const device = await (navigator as any).bluetooth.requestDevice({
-        acceptAllDevices: true,
-      });
+      const device = await (navigator as any).bluetooth.requestDevice({ acceptAllDevices: true });
       const codi = device.name || device.id;
       registrarPas(codi, "ble");
     } catch (err) {
@@ -201,10 +218,10 @@ export default function ActivityRunner({
 
       <div className="bg-superficie border border-vora rounded-card p-5 text-center">
         <p className="text-xs text-text-secundari uppercase tracking-wide mb-1">
-          {completada ? "Activitat completada" : "En curs"}
+          {completada ? "Activitat completada" : activitat.iniciadaEl ? "En curs" : "Esperant el primer punt de control"}
         </p>
         <p className="text-2xl font-medium text-text-principal font-mono">
-          {formatDuracio(activitat.iniciadaEl)}
+          {activitat.iniciadaEl ? formatDuracio(activitat.iniciadaEl) : "00:00:00"}
         </p>
       </div>
 
