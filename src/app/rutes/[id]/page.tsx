@@ -46,6 +46,7 @@ export default async function RutaDetallPage({
     select geojson from route_tracks where route_id = ${id} limit 1
   `;
   const geojson = trackRows[0]?.geojson ?? null;
+  const teTrack = trackRows.length > 0;
 
   const rankingTop = await sql`
     select nom_usuari, genere, temps_total, posicio
@@ -85,8 +86,19 @@ export default async function RutaDetallPage({
         )}
 
         {geojson && (
-          <div className="mb-6">
+          <div className="mb-3">
             <RouteMap geojson={geojson} />
+          </div>
+        )}
+
+        {teTrack && (
+          <div className="flex gap-2 mb-6">
+            <a href={`/api/rutes/${id}/descarregar?format=gpx`} className="text-xs text-pi font-medium border border-pi rounded-lg px-3 py-1.5 hover:bg-pi-clar transition-colors">
+              Descarregar GPX
+            </a>
+            <a href={`/api/rutes/${id}/descarregar?format=kml`} className="text-xs text-pi font-medium border border-pi rounded-lg px-3 py-1.5 hover:bg-pi-clar transition-colors">
+              Descarregar KML
+            </a>
           </div>
         )}
 
@@ -175,7 +187,6 @@ function formatTemps(interval: any): string {
   if (!interval) return "";
   if (typeof interval === "string") return interval;
 
-  // Neon/postgres pot retornar l'interval com objecte { hours, minutes, seconds }
   const h = interval.hours ?? 0;
   const m = interval.minutes ?? 0;
   const s = Math.round(interval.seconds ?? 0);
