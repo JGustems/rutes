@@ -308,11 +308,11 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
 
       <style jsx global>{`
         .popup-translucid .leaflet-popup-content-wrapper {
-          background: rgba(255, 255, 255, 0.78);
+          background: rgba(255, 255, 255, 0.75);
           backdrop-filter: blur(2px);
         }
         .popup-translucid .leaflet-popup-tip {
-          background: rgba(255, 255, 255, 0.78);
+          background: rgba(255, 255, 255, 0.75);
         }
       `}</style>
     </div>
