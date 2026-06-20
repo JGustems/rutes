@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { sql } from "@/lib/db";
 import Link from "next/link";
+import AliesForm from "./alies-form";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export default async function PerfilPage() {
   const userId = (session.user as any).id;
 
   const usuaris = await sql`
-    select nom, email, genere from users where id = ${userId} limit 1
+    select nom, email, genere, alies from users where id = ${userId} limit 1
   `;
   const usuari = usuaris[0];
 
@@ -48,33 +49,53 @@ export default async function PerfilPage() {
           </Link>
         </div>
 
+        {/* Dades personals */}
         <div className="bg-superficie border border-vora rounded-card p-5 mb-6">
           <p className="text-lg font-medium text-text-principal mb-1">{usuari.nom}</p>
           <p className="text-sm text-text-secundari mb-1">{usuari.email}</p>
-          <p className="text-xs text-text-secundari">{GENERE_LABELS[usuari.genere] ?? usuari.genere}</p>
+          <p className="text-xs text-text-secundari">
+            {GENERE_LABELS[usuari.genere] ?? usuari.genere}
+          </p>
         </div>
 
-        <h2 className="text-sm font-medium text-text-secundari uppercase tracking-wide mb-3">Estadístiques</h2>
+        {/* Alies per als ranquings */}
+        <AliesForm aliesActual={usuari.alies} />
+
+        {/* Estadistiques */}
+        <h2 className="text-sm font-medium text-text-secundari uppercase tracking-wide mb-3">
+          Estadístiques
+        </h2>
         <div className="grid grid-cols-2 gap-3 mb-6">
           <div className="bg-superficie border border-vora rounded-card p-4">
             <p className="text-xs text-text-secundari mb-1">Activitats completades</p>
-            <p className="text-2xl font-medium text-text-principal">{stats.activitats_completades}</p>
+            <p className="text-2xl font-medium text-text-principal">
+              {stats.activitats_completades}
+            </p>
           </div>
           <div className="bg-superficie border border-vora rounded-card p-4">
             <p className="text-xs text-text-secundari mb-1">Rutes diferents</p>
-            <p className="text-2xl font-medium text-text-principal">{stats.rutes_diferents}</p>
+            <p className="text-2xl font-medium text-text-principal">
+              {stats.rutes_diferents}
+            </p>
           </div>
           <div className="bg-superficie border border-vora rounded-card p-4">
             <p className="text-xs text-text-secundari mb-1">Km totals</p>
-            <p className="text-2xl font-medium text-text-principal">{Number(stats.km_totals).toFixed(1)}</p>
+            <p className="text-2xl font-medium text-text-principal">
+              {Number(stats.km_totals).toFixed(1)}
+            </p>
           </div>
           <div className="bg-superficie border border-vora rounded-card p-4">
             <p className="text-xs text-text-secundari mb-1">Desnivell acumulat</p>
-            <p className="text-2xl font-medium text-text-principal">{stats.desnivell_positiu_total_m} m</p>
+            <p className="text-2xl font-medium text-text-principal">
+              {stats.desnivell_positiu_total_m} m
+            </p>
           </div>
         </div>
 
-        <Link href="/" className="w-full bg-terra text-white text-center rounded-lg py-3 text-sm font-medium hover:bg-terra-fosc transition-colors block">
+        <Link
+          href="/"
+          className="w-full bg-terra text-white text-center rounded-lg py-3 text-sm font-medium hover:bg-terra-fosc transition-colors block"
+        >
           Explorar rutes
         </Link>
 
