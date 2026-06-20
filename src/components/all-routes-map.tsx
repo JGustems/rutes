@@ -167,6 +167,7 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
     const coincidents = rutes.filter(
       (r) => r.geojson && trackPassaPerPunt(r.geojson, puntClic)
     );
+    console.log("Punt clicat:", puntClic, "| Coincidents trobats:", coincidents.length, coincidents.map(r => r.nom));
 
     if (coincidents.length <= 1) {
       setRutaSeleccionada(coincidents[0]?.id ?? null);
