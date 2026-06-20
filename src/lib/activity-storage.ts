@@ -1,298 +1,65 @@
-"use client";
+// ============================================================
+// Gestio de l'activitat en curs al localStorage del navegador.
+// Aixo permet que l'activitat sobrevisqui si es tanca la
+// pestanya, es perd connexio, etc. Nomes es desa al servidor
+// (Neon) quan l'activitat es sincronitza/finalitza.
+// ============================================================
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import {
-  type ActivitatLocal,
-  obtenirActivitat,
-  desarActivitat,
-  esborrarActivitat,
-  seguentCheckpointEsperat,
-  activitatCompletada,
-} from "@/lib/activity-storage";
+const STORAGE_KEY = "activitat_en_curs";
 
-type CheckpointInfo = {
+export type PasLocal = {
   checkpointId: string;
-  nom: string;
-  ordre: number;
-  esInici: boolean;
-  esFi: boolean;
-  tagCodi: string | null;
-  tagTipus: "nfc" | "ble" | null;
+  detectatEl: string;
+  font: "nfc" | "ble" | "manual";
 };
 
-function normalitzarCodi(codi: string): string {
-  return codi.trim().toLowerCase().replace(/[\s:.-]/g, "");
-}
-
-export default function ActivityRunner({
-  routeId,
-  routeNom,
-  checkpoints,
-}: {
+export type ActivitatLocal = {
+  localId: string;
   routeId: string;
-  routeNom: string;
-  checkpoints: CheckpointInfo[];
-}) {
-  const router = useRouter();
-  const [activitat, setActivitat] = useState<ActivitatLocal | null>(null);
-  const [codiManual, setCodiManual] = useState("");
-  const [missatge, setMissatge] = useState<{ tipus: "ok" | "error"; text: string } | null>(null);
-  const [nfcDisponible, setNfcDisponible] = useState(false);
-  const [bleConnectant, setBleConnectant] = useState(false);
-  const [sincronitzant, setSincronitzant] = useState(false);
+  sentit: "anada" | "tornada";
+  iniciadaEl: string | null;
+  fontInici: "nfc" | "ble" | "manual" | null;
+  passos: PasLocal[];
+  checkpointsEsperat: { checkpointId: string; ordre: number; tagCodi: string | null }[];
+};
 
-  useEffect(() => {
-    const existent = obtenirActivitat();
-    if (existent && existent.routeId === routeId) {
-      setActivitat(existent);
-    }
-    setNfcDisponible(typeof window !== "undefined" && "NDEFReader" in window);
-  }, [routeId]);
-
-  const [, forcarActualitzacio] = useState(0);
-  useEffect(() => {
-    if (!activitat || activitatCompletada(activitat)) return;
-    const interval = setInterval(() => {
-      forcarActualitzacio((n) => n + 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [activitat]);
-
-  const mostrarMissatge = useCallback((tipus: "ok" | "error", text: string) => {
-    setMissatge({ tipus, text });
-    setTimeout(() => setMissatge(null), 4000);
-  }, []);
-
-  function registrarPas(codiDetectatRaw: string, font: "nfc" | "ble" | "manual") {
-    const codiDetectat = normalitzarCodi(codiDetectatRaw);
-
-    setActivitat((actual) => {
-      if (!actual) return actual;
-
-      const esperat = seguentCheckpointEsperat(actual);
-      if (!esperat) {
-        mostrarMissatge("error", "Ja s'han completat tots els punts de control");
-        return actual;
-      }
-
-      if (normalitzarCodi(esperat.tagCodi ?? "") !== codiDetectat) {
-        mostrarMissatge("error", "Aquest codi no correspon al següent punt de control esperat");
-        return actual;
-      }
-
-      const araIso = new Date().toISOString();
-      const esPrimerPas = actual.passos.length === 0;
-
-      const nouPas = {
-        checkpointId: esperat.checkpointId,
-        detectatEl: araIso,
-        font,
-      };
-
-      const actualitzada: ActivitatLocal = {
-        ...actual,
-        iniciadaEl: esPrimerPas ? araIso : actual.iniciadaEl,
-        passos: [...actual.passos, nouPas],
-      };
-
-      desarActivitat(actualitzada);
-      mostrarMissatge("ok", "Punt de control validat!");
-      return actualitzada;
-    });
+export function generarUUID(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
   }
-
-  function iniciar(font: "nfc" | "ble" | "manual") {
-    const checkpointsEsperat = checkpoints
-      .sort((a, b) => a.ordre - b.ordre)
-      .map((c) => ({ checkpointId: c.checkpointId, ordre: c.ordre, tagCodi: c.tagCodi }));
-
-    const nova: ActivitatLocal = {
-      localId: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-      routeId,
-      sentit: "anada",
-      iniciadaEl: null,
-      fontInici: font,
-      passos: [],
-      checkpointsEsperat,
-    };
-
-    desarActivitat(nova);
-    setActivitat(nova);
-  }
-
-  function abandonar() {
-    if (!confirm("Segur que vols abandonar aquesta activitat? Es perdrà el progrés.")) return;
-    esborrarActivitat();
-    setActivitat(null);
-  }
-
-  async function escoltarNFC() {
-    if (!nfcDisponible) {
-      mostrarMissatge("error", "Aquest dispositiu o navegador no suporta NFC");
-      return;
-    }
-    try {
-      // @ts-ignore
-      const reader = new (window as any).NDEFReader();
-      await reader.scan();
-      mostrarMissatge("ok", "Escoltant NFC... acosta el mòbil al tag");
-      reader.onreading = (event: any) => {
-        const serialNumber = event.serialNumber as string;
-        registrarPas(serialNumber, "nfc");
-      };
-    } catch (err) {
-      mostrarMissatge("error", "No s'ha pogut activar el lector NFC");
-    }
-  }
-
-  async function connectarBLE() {
-    if (typeof navigator === "undefined" || !("bluetooth" in navigator)) {
-      mostrarMissatge("error", "Aquest dispositiu o navegador no suporta Bluetooth");
-      return;
-    }
-    setBleConnectant(true);
-    try {
-      const device = await (navigator as any).bluetooth.requestDevice({ acceptAllDevices: true });
-      const codi = device.name || device.id;
-      registrarPas(codi, "ble");
-    } catch (err) {
-      mostrarMissatge("error", "No s'ha trobat o connectat cap dispositiu Bluetooth");
-    } finally {
-      setBleConnectant(false);
-    }
-  }
-
-  function enviarCodiManual() {
-    if (!codiManual.trim()) return;
-    registrarPas(codiManual.trim(), "manual");
-    setCodiManual("");
-  }
-
-  async function sincronitzar() {
-    if (!activitat) return;
-    setSincronitzant(true);
-
-    const res = await fetch("/api/activitats/sincronitzar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(activitat),
-    });
-
-    setSincronitzant(false);
-
-    if (!res.ok) {
-      const data = await res.json();
-      mostrarMissatge("error", data.error ?? "Error en sincronitzar");
-      return;
-    }
-
-    esborrarActivitat();
-    router.push("/historial");
-  }
-
-  if (!activitat) {
-    return (
-      <div className="bg-superficie border border-vora rounded-card p-6 text-center">
-        <p className="text-sm text-text-secundari mb-4">
-          Preparat per començar la ruta &quot;{routeNom}&quot;?
-        </p>
-        <button onClick={() => iniciar("manual")} className="w-full bg-terra text-white rounded-lg py-3 text-sm font-medium hover:bg-terra-fosc transition-colors">
-          Iniciar activitat
-        </button>
-      </div>
-    );
-  }
-
-  const esperat = seguentCheckpointEsperat(activitat);
-  const completada = activitatCompletada(activitat);
-  const checkpointsOrdenats = [...checkpoints].sort((a, b) => a.ordre - b.ordre);
-
-  return (
-    <div className="flex flex-col gap-4">
-      {missatge && (
-        <div className={`text-sm px-4 py-3 rounded-lg ${missatge.tipus === "ok" ? "bg-exit-clar text-exit-fosc" : "bg-alerta-clar text-alerta"}`}>
-          {missatge.text}
-        </div>
-      )}
-
-      <div className="bg-superficie border border-vora rounded-card p-5 text-center">
-        <p className="text-xs text-text-secundari uppercase tracking-wide mb-1">
-          {completada ? "Activitat completada" : activitat.iniciadaEl ? "En curs" : "Esperant el primer punt de control"}
-        </p>
-        <p className="text-2xl font-medium text-text-principal font-mono">
-          {activitat.iniciadaEl ? formatDuracio(activitat.iniciadaEl) : "00:00:00"}
-        </p>
-      </div>
-
-      {!completada && esperat && (
-        <div className="bg-superficie border border-pi rounded-card p-5">
-          <p className="text-xs text-text-secundari mb-3">Següent punt de control esperat</p>
-          <div className="flex flex-col gap-3">
-            <button onClick={escoltarNFC} disabled={!nfcDisponible} className="w-full bg-pi text-white rounded-lg py-2.5 text-sm font-medium hover:bg-pi-fosc transition-colors disabled:opacity-40">
-              {nfcDisponible ? "Escoltar NFC" : "NFC no disponible en aquest navegador"}
-            </button>
-
-            <button onClick={connectarBLE} disabled={bleConnectant} className="w-full bg-cel text-white rounded-lg py-2.5 text-sm font-medium hover:bg-cel-fosc transition-colors disabled:opacity-50">
-              {bleConnectant ? "Connectant..." : "Connectar amb Bluetooth"}
-            </button>
-
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={codiManual}
-                onChange={(e) => setCodiManual(e.target.value)}
-                placeholder="Introdueix el codi manualment"
-                className="flex-1 border border-vora rounded-lg px-3 py-2 text-sm text-text-principal bg-fons focus:outline-none focus:border-pi"
-              />
-              <button onClick={enviarCodiManual} className="bg-terra text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-terra-fosc transition-colors">
-                Validar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-superficie border border-vora rounded-card p-5">
-        <p className="text-xs font-medium text-text-secundari uppercase tracking-wide mb-3">Progrés</p>
-        <div className="flex flex-col gap-2">
-          {checkpointsOrdenats.map((cp) => {
-            const fet = activitat.passos.find((p) => p.checkpointId === cp.checkpointId);
-            return (
-              <div key={cp.checkpointId} className="flex items-center gap-3">
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0 ${fet ? "bg-exit text-white" : "bg-fons border border-vora text-text-secundari"}`}>
-                  {fet ? "✓" : cp.ordre}
-                </span>
-                <span className="text-sm text-text-principal">
-                  {cp.nom}
-                  {cp.esInici && <span className="text-xs text-pi ml-2">(Inici)</span>}
-                  {cp.esFi && <span className="text-xs text-terra ml-2">(Fi)</span>}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {completada ? (
-        <button onClick={sincronitzar} disabled={sincronitzant} className="w-full bg-terra text-white rounded-lg py-3 text-sm font-medium hover:bg-terra-fosc transition-colors disabled:opacity-50">
-          {sincronitzant ? "Sincronitzant..." : "Finalitzar i desar activitat"}
-        </button>
-      ) : (
-        <button onClick={abandonar} className="w-full bg-superficie border border-alerta text-alerta rounded-lg py-2.5 text-sm font-medium hover:bg-alerta-clar transition-colors">
-          Abandonar activitat
-        </button>
-      )}
-    </div>
-  );
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
 
-function formatDuracio(iniciadaEl: string): string {
-  const inici = new Date(iniciadaEl).getTime();
-  const ara = Date.now();
-  const segons = Math.floor((ara - inici) / 1000);
-  const h = Math.floor(segons / 3600);
-  const m = Math.floor((segons % 3600) / 60);
-  const s = segons % 60;
-  return [h, m, s].map((n) => String(n).padStart(2, "0")).join(":");
+export function desarActivitat(activitat: ActivitatLocal) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(activitat));
+}
+
+export function obtenirActivitat(): ActivitatLocal | null {
+  if (typeof window === "undefined") return null;
+  const raw = window.localStorage.getItem(STORAGE_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as ActivitatLocal;
+  } catch {
+    return null;
+  }
+}
+
+export function esborrarActivitat() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(STORAGE_KEY);
+}
+
+export function seguentCheckpointEsperat(activitat: ActivitatLocal) {
+  const idsFets = new Set(activitat.passos.map((p) => p.checkpointId));
+  return activitat.checkpointsEsperat.find((c) => !idsFets.has(c.checkpointId)) ?? null;
+}
+
+export function activitatCompletada(activitat: ActivitatLocal): boolean {
+  return seguentCheckpointEsperat(activitat) === null;
 }
