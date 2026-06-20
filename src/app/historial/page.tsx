@@ -17,6 +17,17 @@ const ESTAT_LABELS: Record<string, string> = {
   en_curs: "En curs",
 };
 
+function formatTemps(interval: any): string {
+  if (!interval) return "";
+  if (typeof interval === "string") return interval;
+
+  // Neon/postgres pot retornar l'interval com objecte { hours, minutes, seconds }
+  const h = interval.hours ?? 0;
+  const m = interval.minutes ?? 0;
+  const s = Math.round(interval.seconds ?? 0);
+  return [h, m, s].map((n) => String(n).padStart(2, "0")).join(":");
+}
+
 export default async function HistorialPage() {
   const session = await auth();
   if (!session?.user) {
@@ -78,7 +89,9 @@ export default async function HistorialPage() {
                     {a.controls_validats} de {a.controls_esperats} controls
                   </p>
                   {a.temps_total && (
-                    <p className="text-sm font-mono text-text-principal">{String(a.temps_total)}</p>
+                    <p className="text-sm font-mono text-text-principal">
+                      {formatTemps(a.temps_total)}
+                    </p>
                   )}
                 </div>
               </Link>
