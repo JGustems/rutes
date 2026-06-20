@@ -20,8 +20,8 @@ const COLOR_PER_CATEGORIA: Record<string, string> = {
   carretera: "#0F4D66",
 };
 
-const TOLERANCIA_GRUP_METRES = 200;
-const TOLERANCIA_CLIC_METRES = 20;
+const TOLERANCIA_GRUP_METRES = 50;
+const TOLERANCIA_CLIC_METRES = 200;
 
 function distanciaMetres(a: [number, number], b: [number, number]): number {
   const R = 6371000;
