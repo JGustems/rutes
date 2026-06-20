@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { localId, routeId, sentit, iniciadaEl, fontInici, passos, checkpointsEsperat } = body;
 
-    if (!localId || !routeId || !sentit || !iniciadaEl || !Array.isArray(passos)) {
+    if (!localId || !routeId || !sentit || !Array.isArray(passos)) {
       return NextResponse.json({ error: "Dades incompletes" }, { status: 400 });
     }
 
@@ -39,13 +39,14 @@ export async function POST(req: Request) {
 
     const estatFinal = completaTots && ordreCorrecte ? "completada" : "invalidada";
 
-    const finalitzadaEl = passos.length > 0 ? passos[passos.length - 1].detectatEl : iniciadaEl;
+    const finalitzadaEl = passos.length > 0 ? passos[passos.length - 1].detectatEl : new Date().toISOString();
+    const iniciadaElFinal = iniciadaEl ?? (passos.length > 0 ? passos[0].detectatEl : finalitzadaEl);
 
     const activityResult = await sql`
       insert into activities (
         local_id, user_id, route_id, sentit, iniciada_el, finalitzada_el, estat, font_inici
       ) values (
-        ${localId}, ${userId}, ${routeId}, ${sentit}, ${iniciadaEl}, ${finalitzadaEl}, ${estatFinal}, ${fontInici}
+        ${localId}, ${userId}, ${routeId}, ${sentit}, ${iniciadaElFinal}, ${finalitzadaEl}, ${estatFinal}, ${fontInici}
       )
       returning id
     `;
