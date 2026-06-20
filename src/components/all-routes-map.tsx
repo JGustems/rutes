@@ -221,6 +221,7 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
               style={{ color: "#000", weight: 24, opacity: 0 }}
               eventHandlers={{
                 click: (e: any) => {
+                  console.log("CLIC DETECTAT al hitbox", e.latlng);
                   L.DomEvent.stopPropagation(e);
                   const punt: [number, number] = [e.latlng.lat, e.latlng.lng];
                   handleClickTrack(punt);
