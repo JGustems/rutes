@@ -10,9 +10,11 @@ function NavLink({ href, children, className }: { href: string; children: React.
   return (
     <Link
       href={href}
-      className={`text-sm transition-colors ${
-        actiu ? "text-pi font-medium" : "text-text-secundari hover:text-text-principal"
-      } ${className ?? ""}`}
+      className={`text-sm px-2.5 py-1 rounded-lg transition-colors ${
+        actiu
+          ? "bg-pi-clar text-pi-fosc font-medium"
+          : `text-text-secundari hover:text-text-principal ${className ?? ""}`
+      }`}
     >
       {children}
     </Link>
@@ -26,7 +28,7 @@ export default function NavLinks({ isAdmin, isLoggedIn }: { isAdmin: boolean; is
       {isLoggedIn && (
         <>
           {isAdmin && (
-            <NavLink href="/admin" className="text-terra">
+            <NavLink href="/admin" className="!text-terra font-medium">
               Admin
             </NavLink>
           )}
