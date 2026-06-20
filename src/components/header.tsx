@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import Link from "next/link";
 import SignOutButton from "./sign-out-button";
+import NavLinks from "./nav-links";
 
 export default async function Header() {
   const session = await auth();
@@ -14,27 +15,9 @@ export default async function Header() {
         </Link>
 
         <nav className="flex items-center gap-4">
-          <Link
-            href="/rutes"
-            className="text-sm text-text-secundari hover:text-text-principal transition-colors"
-          >
-            Rutes
-          </Link>
+          <NavLinks isAdmin={isAdmin} isLoggedIn={!!session?.user} />
           {session?.user ? (
-            <>
-              {isAdmin && (
-                <Link href="/admin" className="text-sm text-terra font-medium hover:underline">
-                  Admin
-                </Link>
-              )}
-              <Link href="/historial" className="text-sm text-text-secundari hover:text-text-principal transition-colors">
-                Historial
-              </Link>
-              <Link href="/perfil" className="text-sm text-text-secundari hover:text-text-principal transition-colors">
-                Perfil
-              </Link>
-              <SignOutButton />
-            </>
+            <SignOutButton />
           ) : (
             <Link href="/auth/login" className="text-sm text-pi font-medium hover:underline">
               Inicia sessió
