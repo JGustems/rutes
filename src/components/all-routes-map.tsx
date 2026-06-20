@@ -372,7 +372,7 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
           backdrop-filter: blur(2px);
         }
         .popup-translucid .leaflet-popup-tip {
-          background: rgba(255, 255, 255, 0.95);
+          background: rgba(255, 255, 255, 0.72);
         }
       `}</style>
     </div>
