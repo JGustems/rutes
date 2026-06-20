@@ -172,6 +172,12 @@ export default async function RutaDetallPage({
 }
 
 function formatTemps(interval: any): string {
+  if (!interval) return "";
   if (typeof interval === "string") return interval;
-  return String(interval);
+
+  // Neon/postgres pot retornar l'interval com objecte { hours, minutes, seconds }
+  const h = interval.hours ?? 0;
+  const m = interval.minutes ?? 0;
+  const s = Math.round(interval.seconds ?? 0);
+  return [h, m, s].map((n) => String(n).padStart(2, "0")).join(":");
 }
