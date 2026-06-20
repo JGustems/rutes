@@ -79,7 +79,7 @@ export default function ActivityRunner({
       if (normalitzarCodi(esperat.tagCodi ?? "") !== codiDetectat) {
         mostrarMissatge(
           "error",
-          `DEBUG - esperat: "${normalitzarCodi(esperat.tagCodi ?? "")}" (raw: "${esperat.tagCodi}") | introduit: "${codiDetectat}" (raw: "${codiDetectatRaw}")`
+          "Aquest codi no correspon al següent punt de control esperat"
         );
         return actual;
       }
