@@ -2,6 +2,8 @@ import { sql } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import RouteMap from "@/components/route-map-wrapper";
+import { auth } from "@/lib/auth";
+import ActivityRunner from "@/components/activity-runner";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +53,17 @@ export default async function RutaDetallPage({
     where route_id = ${id}
     order by posicio asc
     limit 10
+  `;
+
+  const session = await auth();
+
+  const checkpointsPerActivitat = await sql`
+    select c.id as checkpoint_id, c.nom, rc.ordre, rc.es_inici, rc.es_fi, t.codi as tag_codi, t.tipus as tag_tipus
+    from route_checkpoints rc
+    join checkpoints c on c.id = rc.checkpoint_id
+    left join tags t on t.id = c.tag_id
+    where rc.route_id = ${id} and rc.sentit = 'anada'
+    order by rc.ordre asc
   `;
 
   return (
@@ -133,9 +146,25 @@ export default async function RutaDetallPage({
           </div>
         )}
 
-        <Link href="/auth/login" className="w-full bg-terra text-white text-center rounded-lg py-3 text-sm font-medium hover:bg-terra-fosc transition-colors block">
-          Inicia sessió per fer aquesta ruta
-        </Link>
+        {session?.user ? (
+          <ActivityRunner
+            routeId={id}
+            routeNom={ruta.nom}
+            checkpoints={checkpointsPerActivitat.map((c: any) => ({
+              checkpointId: c.checkpoint_id,
+              nom: c.nom,
+              ordre: c.ordre,
+              esInici: c.es_inici,
+              esFi: c.es_fi,
+              tagCodi: c.tag_codi,
+              tagTipus: c.tag_tipus,
+            }))}
+          />
+        ) : (
+          <Link href="/auth/login" className="w-full bg-terra text-white text-center rounded-lg py-3 text-sm font-medium hover:bg-terra-fosc transition-colors block">
+            Inicia sessió per fer aquesta ruta
+          </Link>
+        )}
 
       </div>
     </main>
