@@ -10,18 +10,26 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nom, setNom] = useState("");
+  const [acceptaTermes, setAcceptaTermes] = useState(false);
   const [error, setError] = useState("");
   const [carregant, setCarregant] = useState(false);
 
   async function handleEmail() {
     setError("");
+
+    if (mode === "registre" && !acceptaTermes) {
+      setError("Has d'acceptar les condicions d'ús per crear un compte");
+      return;
+    }
+
     setCarregant(true);
 
     if (mode === "registre") {
+      // Crear compte nou via API
       const res = await fetch("/api/auth/registre", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, nom }),
+        body: JSON.stringify({ email, password, nom, acceptaTermes }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -31,6 +39,7 @@ export default function LoginPage() {
       }
     }
 
+    // Login (tant si era registre com si era login directe)
     const result = await signIn("credentials", {
       email,
       password,
@@ -56,6 +65,7 @@ export default function LoginPage() {
     <main className="min-h-screen bg-fons flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
 
+        {/* Capçalera */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-medium text-text-principal mb-1">
             Rutes Muntanya
@@ -67,6 +77,7 @@ export default function LoginPage() {
 
         <div className="bg-superficie border border-vora rounded-card p-6 shadow-sm">
 
+          {/* Botó Google */}
           <button
             onClick={handleGoogle}
             disabled={carregant}
@@ -87,10 +98,13 @@ export default function LoginPage() {
             <div className="flex-1 h-px bg-vora" />
           </div>
 
+          {/* Formulari email */}
           <div className="flex flex-col gap-3">
             {mode === "registre" && (
               <div>
-                <label className="text-xs font-medium text-text-secundari block mb-1">Nom</label>
+                <label className="text-xs font-medium text-text-secundari block mb-1">
+                  Nom
+                </label>
                 <input
                   type="text"
                   value={nom}
@@ -102,7 +116,9 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label className="text-xs font-medium text-text-secundari block mb-1">Email</label>
+              <label className="text-xs font-medium text-text-secundari block mb-1">
+                Email
+              </label>
               <input
                 type="email"
                 value={email}
@@ -113,7 +129,9 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="text-xs font-medium text-text-secundari block mb-1">Contrasenya</label>
+              <label className="text-xs font-medium text-text-secundari block mb-1">
+                Contrasenya
+              </label>
               <input
                 type="password"
                 value={password}
@@ -122,6 +140,29 @@ export default function LoginPage() {
                 className="w-full border border-vora rounded-lg px-3 py-2 text-sm text-text-principal bg-fons focus:outline-none focus:border-pi"
               />
             </div>
+
+            {mode === "registre" && (
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptaTermes}
+                  onChange={(e) => setAcceptaTermes(e.target.checked)}
+                  className="accent-pi w-4 h-4 mt-0.5 shrink-0"
+                />
+                <span className="text-xs text-text-secundari">
+                  He llegit i accepto les{" "}
+                  <a
+                    href="/termes"
+                    target="_blank"
+                    className="text-pi font-medium hover:underline"
+                  >
+                    condicions d&apos;ús
+                  </a>
+                  , incloent que aquesta activitat no és competitiva i que
+                  la faig sota la meva pròpia responsabilitat.
+                </span>
+              </label>
+            )}
 
             {error && (
               <p className="text-xs text-alerta">{error}</p>
@@ -132,28 +173,40 @@ export default function LoginPage() {
               disabled={carregant}
               className="w-full bg-terra text-white rounded-lg py-2.5 text-sm font-medium hover:bg-terra-fosc transition-colors disabled:opacity-50"
             >
-              {carregant ? "Carregant..." : mode === "login" ? "Inicia sessió" : "Crea el compte"}
+              {carregant
+                ? "Carregant..."
+                : mode === "login"
+                ? "Inicia sessió"
+                : "Crea el compte"}
             </button>
           </div>
 
+          {/* Canvi login/registre */}
           <p className="text-center text-xs text-text-secundari mt-4">
             {mode === "login" ? (
               <>
                 Encara no tens compte?{" "}
-                <button onClick={() => { setMode("registre"); setError(""); }} className="text-pi font-medium hover:underline">
+                <button
+                  onClick={() => { setMode("registre"); setError(""); }}
+                  className="text-pi font-medium hover:underline"
+                >
                   Registra't
                 </button>
               </>
             ) : (
               <>
                 Ja tens compte?{" "}
-                <button onClick={() => { setMode("login"); setError(""); }} className="text-pi font-medium hover:underline">
+                <button
+                  onClick={() => { setMode("login"); setError(""); }}
+                  className="text-pi font-medium hover:underline"
+                >
                   Inicia sessió
                 </button>
               </>
             )}
           </p>
         </div>
+
       </div>
     </main>
   );
