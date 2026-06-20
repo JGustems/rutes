@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
-import { useRouter } from "next/navigation";
 import "leaflet/dist/leaflet.css";
 
 type RutaAmbTrack = {
@@ -21,14 +20,38 @@ const COLOR_PER_CATEGORIA: Record<string, string> = {
   carretera: "#0F4D66",
 };
 
-// Icona personalitzada per als marcadors (la per defecte de Leaflet
-// no es carrega be amb bundlers moderns sense configuracio extra)
-const iconaMarcador = L.divIcon({
-  className: "",
-  html: `<div style="width:14px;height:14px;border-radius:50%;background:#C97D4A;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4);"></div>`,
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
-});
+// Tolerancia per considerar dos punts "el mateix lloc" (en graus,
+// aprox. 30-40 metres)
+const TOLERANCIA = 0.0004;
+
+function obtenirPrimerPunt(geojson: any): [number, number] | null {
+  if (!geojson) return null;
+  try {
+    const coords =
+      geojson.features?.[0]?.geometry?.coordinates ?? geojson.geometry?.coordinates;
+    if (!coords) return null;
+    const punt = Array.isArray(coords[0][0]) ? coords[0][0] : coords[0];
+    return [punt[1], punt[0]];
+  } catch {
+    return null;
+  }
+}
+
+function iconaGrup(numRutes: number, seleccionat: boolean) {
+  const mida = numRutes > 1 ? 26 : 14;
+  const color = seleccionat ? "#B5533C" : "#C97D4A";
+  const contingut =
+    numRutes > 1
+      ? `<div style="width:${mida}px;height:${mida}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:600;">${numRutes}</div>`
+      : `<div style="width:${mida}px;height:${mida}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4);"></div>`;
+
+  return L.divIcon({
+    className: "",
+    html: contingut,
+    iconSize: [mida, mida],
+    iconAnchor: [mida / 2, mida / 2],
+  });
+}
 
 function AjustarVistaGlobal({ rutes }: { rutes: RutaAmbTrack[] }) {
   const map = useMap();
@@ -59,8 +82,32 @@ function AjustarVistaGlobal({ rutes }: { rutes: RutaAmbTrack[] }) {
 }
 
 export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
-  const router = useRouter();
   const centerDefecte: [number, number] = [41.5912, 1.5209];
+  const [rutaSeleccionada, setRutaSeleccionada] = useState<string | null>(null);
+
+  // Agrupar rutes pel seu punt de sortida (amb tolerancia)
+  const grups = useMemo(() => {
+    const llistaGrups: { punt: [number, number]; rutes: RutaAmbTrack[] }[] = [];
+
+    for (const r of rutes) {
+      const punt = obtenirPrimerPunt(r.geojson);
+      if (!punt) continue;
+
+      const grupExistent = llistaGrups.find(
+        (g) =>
+          Math.abs(g.punt[0] - punt[0]) < TOLERANCIA &&
+          Math.abs(g.punt[1] - punt[1]) < TOLERANCIA
+      );
+
+      if (grupExistent) {
+        grupExistent.rutes.push(r);
+      } else {
+        llistaGrups.push({ punt, rutes: [r] });
+      }
+    }
+
+    return llistaGrups;
+  }, [rutes]);
 
   return (
     <div className="w-full h-72 rounded-card overflow-hidden border border-vora mb-6">
@@ -81,26 +128,70 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
               key={r.id}
               data={r.geojson}
               style={{
-                color: COLOR_PER_CATEGORIA[r.categoria] ?? "#C97D4A",
-                weight: 3,
-                opacity: 0.8,
+                color:
+                  rutaSeleccionada === r.id
+                    ? "#B5533C"
+                    : COLOR_PER_CATEGORIA[r.categoria] ?? "#C97D4A",
+                weight: rutaSeleccionada === r.id ? 5 : 3,
+                opacity: rutaSeleccionada && rutaSeleccionada !== r.id ? 0.3 : 0.8,
               }}
               eventHandlers={{
-                click: () => router.push(`/rutes/${r.id}`),
+                click: () => setRutaSeleccionada(r.id),
               }}
             />
           ) : null
         )}
 
-        {rutes.map((r) => {
-          const primerPunt = obtenirPrimerPunt(r.geojson);
-          if (!primerPunt) return null;
+        {grups.map((grup, idx) => {
+          const numRutes = grup.rutes.length;
+          const teSeleccionada = grup.rutes.some((r) => r.id === rutaSeleccionada);
+
           return (
-            <Marker key={`marker-${r.id}`} position={primerPunt} icon={iconaMarcador}>
-              <Popup>
-                <a href={`/rutes/${r.id}`} className="text-sm font-medium">
-                  {r.nom}
-                </a>
+            <Marker
+              key={`grup-${idx}`}
+              position={grup.punt}
+              icon={iconaGrup(numRutes, teSeleccionada)}
+            >
+              <Popup minWidth={180}>
+                {numRutes === 1 ? (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm font-medium">{grup.rutes[0].nom}</p>
+                    <a
+                      href={`/rutes/${grup.rutes[0].id}`}
+                      className="text-xs text-pi font-medium underline"
+                    >
+                      Anar a la ruta →
+                    </a>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-xs text-text-secundari mb-1">
+                      {numRutes} rutes surten d&apos;aquí
+                    </p>
+                    {grup.rutes.map((r) => (
+                      <div key={r.id} className="flex items-center justify-between gap-2">
+                        <button
+                          onClick={() => setRutaSeleccionada(r.id)}
+                          className={`text-xs text-left flex-1 ${
+                            rutaSeleccionada === r.id
+                              ? "text-alerta font-medium"
+                              : "text-text-principal"
+                          }`}
+                        >
+                          {r.nom}
+                        </button>
+                        {rutaSeleccionada === r.id && (
+                          <a
+                            href={`/rutes/${r.id}`}
+                            className="text-xs text-pi font-medium underline shrink-0"
+                          >
+                            Anar →
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </Popup>
             </Marker>
           );
@@ -110,17 +201,4 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
       </MapContainer>
     </div>
   );
-}
-
-function obtenirPrimerPunt(geojson: any): [number, number] | null {
-  if (!geojson) return null;
-  try {
-    const coords =
-      geojson.features?.[0]?.geometry?.coordinates ?? geojson.geometry?.coordinates;
-    if (!coords) return null;
-    const punt = Array.isArray(coords[0][0]) ? coords[0][0] : coords[0];
-    return [punt[1], punt[0]];
-  } catch {
-    return null;
-  }
 }
