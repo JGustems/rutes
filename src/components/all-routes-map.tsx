@@ -20,7 +20,7 @@ const COLOR_PER_CATEGORIA: Record<string, string> = {
   carretera: "#0F4D66",
 };
 
-const TOLERANCIA_GRUP_METRES = 50;
+const TOLERANCIA_GRUP_METRES = 200;
 const TOLERANCIA_CLIC_METRES = 200;
 
 function distanciaMetres(a: [number, number], b: [number, number]): number {
@@ -77,7 +77,7 @@ function trackPassaPerPunt(geojson: any, punt: [number, number]): boolean {
   const punts = extreureTotsPunts(geojson);
   const distancies = punts.map((p) => distanciaMetres(p, punt));
   const minDist = Math.min(...distancies);
-  console.log("Distancia minima trobada en aquest track:", minDist.toFixed(1), "metres");
+
   return minDist < TOLERANCIA_CLIC_METRES;
 }
 
@@ -170,7 +170,7 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
     const coincidents = rutes.filter(
       (r) => r.geojson && trackPassaPerPunt(r.geojson, puntClic)
     );
-    console.log("Punt clicat:", puntClic, "| Coincidents trobats:", coincidents.length, coincidents.map(r => r.nom));
+    
 
     if (coincidents.length <= 1) {
       setRutaSeleccionada(coincidents[0]?.id ?? null);
@@ -225,7 +225,7 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
               style={{ color: "#000", weight: 24, opacity: 0 }}
               eventHandlers={{
                 click: (e: any) => {
-                  console.log("CLIC DETECTAT al hitbox", e.latlng);
+                  
                   L.DomEvent.stopPropagation(e);
                   const punt: [number, number] = [e.latlng.lat, e.latlng.lng];
                   handleClickTrack(punt);
