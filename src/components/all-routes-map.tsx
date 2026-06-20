@@ -75,6 +75,7 @@ function extreureTotsPunts(geojson: any): [number, number][] {
 
 function trackPassaPerPunt(geojson: any, punt: [number, number]): boolean {
   const punts = extreureTotsPunts(geojson);
+  console.log("Track te", punts.length, "punts. Exemple primer punt:", punts[0], "| Tipus geojson:", geojson?.type, "| Tipus geometria:", geojson?.features?.[0]?.geometry?.type ?? geojson?.geometry?.type);
   return punts.some((p) => distanciaMetres(p, punt) < TOLERANCIA_CLIC_METRES);
 }
 
