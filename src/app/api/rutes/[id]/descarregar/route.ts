@@ -60,8 +60,8 @@ function sanititzarNomFitxer(nom: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-function extreureCoordenades(geojson: any): [number, number][] {
-  const punts: [number, number][] = [];
+function extreureCoordenades(geojson: any): [number, number, number?][] {
+  const punts: [number, number, number?][] = [];
 
   function processarGeometria(geom: any) {
     if (!geom) return;
