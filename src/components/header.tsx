@@ -14,6 +14,12 @@ export default async function Header() {
         </Link>
 
         <nav className="flex items-center gap-4">
+          <Link
+            href="/rutes"
+            className="text-sm text-text-secundari hover:text-text-principal transition-colors"
+          >
+            Rutes
+          </Link>
           {session?.user ? (
             <>
               {isAdmin && (
