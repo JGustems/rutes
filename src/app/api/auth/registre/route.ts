@@ -42,10 +42,10 @@ export async function POST(req: Request) {
     }
 
     const password_hash = await bcrypt.hash(password, 12);
-
+// Crear l'usuari
     await sql`
-      insert into users (email, nom, password_hash, genere, rol)
-      values (${email}, ${nom}, ${password_hash}, 'no_especificat', 'usuari')
+      insert into users (email, nom, password_hash, genere, rol, accepta_termes)
+      values (${email}, ${nom}, ${password_hash}, 'no_especificat', 'usuari', true)
     `;
 
     return NextResponse.json({ ok: true }, { status: 201 });
