@@ -1,6 +1,5 @@
 import { sql } from "@/lib/db";
-import RutesLlistat from "./rutes-llistat";
-import AllRoutesMap from "@/components/all-routes-map-wrapper";
+import RutesExplorador from "./rutes-explorador";
 
 export const dynamic = "force-dynamic";
 
@@ -35,8 +34,7 @@ export default async function RutesPage() {
         <h1 className="text-xl font-medium text-text-principal mb-6">
           Totes les rutes
         </h1>
-        <AllRoutesMap rutes={rutesAmbTrack} />
-        <RutesLlistat rutes={rutes as any} />
+        <RutesExplorador rutes={rutes as any} rutesAmbTrack={rutesAmbTrack} />
       </div>
     </main>
   );
