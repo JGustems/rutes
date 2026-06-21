@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -21,7 +21,7 @@ const COLOR_PER_CATEGORIA: Record<string, string> = {
 };
 
 const TOLERANCIA_GRUP_METRES = 200;
-const TOLERANCIA_CLIC_METRES = 200;
+const TOLERANCIA_CLIC_METRES = 20;
 
 function distanciaMetres(a: [number, number], b: [number, number]): number {
   const R = 6371000;
@@ -77,7 +77,6 @@ function trackPassaPerPunt(geojson: any, punt: [number, number]): boolean {
   const punts = extreureTotsPunts(geojson);
   const distancies = punts.map((p) => distanciaMetres(p, punt));
   const minDist = Math.min(...distancies);
-
   return minDist < TOLERANCIA_CLIC_METRES;
 }
 
@@ -134,6 +133,19 @@ function DesseleccionarEnClicarFora({ onClickMapa }: { onClickMapa: () => void }
   return null;
 }
 
+function RecalcularMidaEnFullscreen({ esFullscreen }: { esFullscreen: boolean }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      map.invalidateSize();
+    }, 150);
+    return () => clearTimeout(timeout);
+  }, [esFullscreen, map]);
+
+  return null;
+}
+
 export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
   const centerDefecte: [number, number] = [41.5912, 1.5209];
   const [rutaSeleccionada, setRutaSeleccionada] = useState<string | null>(null);
@@ -142,6 +154,25 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
     posicio: [number, number];
     rutes: RutaAmbTrack[];
   } | null>(null);
+  const contenidorRef = useRef<HTMLDivElement>(null);
+  const [esFullscreen, setEsFullscreen] = useState(false);
+
+  useEffect(() => {
+    function handleFullscreenChange() {
+      setEsFullscreen(!!document.fullscreenElement);
+    }
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  async function alternarFullscreen() {
+    if (!contenidorRef.current) return;
+    if (!document.fullscreenElement) {
+      await contenidorRef.current.requestFullscreen();
+    } else {
+      await document.exitFullscreen();
+    }
+  }
 
   const grups = useMemo(() => {
     const llistaGrups: { punt: [number, number]; rutes: RutaAmbTrack[] }[] = [];
@@ -170,7 +201,6 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
     const coincidents = rutes.filter(
       (r) => r.geojson && trackPassaPerPunt(r.geojson, puntClic)
     );
-    
 
     if (coincidents.length <= 1) {
       setRutaSeleccionada(coincidents[0]?.id ?? null);
@@ -182,19 +212,40 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
   }
 
   return (
-    <div className="w-full h-72 rounded-card overflow-hidden border border-vora mb-6">
+    <div
+      ref={contenidorRef}
+      className={`relative w-full overflow-hidden border border-vora mb-6 ${
+        esFullscreen ? "h-screen" : "h-72 rounded-card"
+      }`}
+    >
+      <button
+        onClick={alternarFullscreen}
+        aria-label={esFullscreen ? "Sortir de pantalla completa" : "Pantalla completa"}
+        className="absolute top-2 right-2 z-[1000] bg-white/90 hover:bg-white text-text-principal rounded-lg p-2 shadow-md transition-colors"
+      >
+        {esFullscreen ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M9 9L4 4M9 9H5M9 9V5M15 9L20 4M15 9H19M15 9V5M9 15L4 20M9 15H5M9 15V19M15 15L20 20M15 15H19M15 15V19" />
+          </svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+          </svg>
+        )}
+      </button>
+
       <MapContainer
         center={centerDefecte}
         zoom={9}
         style={{ width: "100%", height: "100%" }}
-        scrollWheelZoom={false}
+        scrollWheelZoom={esFullscreen}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
 
-       {/* Capa visible, nomes pintura, sense interaccio propia */}
+        {/* Capa visible, nomes pintura, sense interaccio propia */}
         {rutes.map((r) =>
           r.geojson ? (
             <GeoJSON
@@ -214,9 +265,7 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
         )}
 
         {/* Capa invisible mes gruixuda PER SOBRE, nomes per ampliar
-            la zona clicable de cada track. En anar per sobre de tot,
-            sempre es ella qui rep el clic, sense cap interferencia
-            de la capa visual de sota. */}
+            la zona clicable de cada track. */}
         {rutes.map((r) =>
           r.geojson ? (
             <GeoJSON
@@ -225,7 +274,6 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
               style={{ color: "#000", weight: 24, opacity: 0 }}
               eventHandlers={{
                 click: (e: any) => {
-                  
                   L.DomEvent.stopPropagation(e);
                   const punt: [number, number] = [e.latlng.lat, e.latlng.lng];
                   handleClickTrack(punt);
@@ -234,8 +282,6 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
             />
           ) : null
         )}
-
-       
 
         {grups.map((grup, idx) => {
           const numRutes = grup.rutes.length;
@@ -292,8 +338,6 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
           );
         })}
 
-        {/* Popup que apareix en seleccionar un track clicant-hi
-            directament (no des d'un marcador de grup) */}
         {rutaSeleccionadaObj && puntSeleccio && (
           <Popup
             position={puntSeleccio}
@@ -345,6 +389,7 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
         )}
 
         <AjustarVistaGlobal rutes={rutes} />
+        <RecalcularMidaEnFullscreen esFullscreen={esFullscreen} />
         <DesseleccionarEnClicarFora
           onClickMapa={() => {
             setRutaSeleccionada(null);
@@ -356,11 +401,11 @@ export default function AllRoutesMap({ rutes }: { rutes: RutaAmbTrack[] }) {
 
       <style jsx global>{`
         .popup-translucid .leaflet-popup-content-wrapper {
-          background: rgba(255, 255, 255, 0.72);
+          background: rgba(255, 255, 255, 0.88);
           backdrop-filter: blur(2px);
         }
         .popup-translucid .leaflet-popup-tip {
-          background: rgba(255, 255, 255, 0.72);
+          background: rgba(255, 255, 255, 0.88);
         }
       `}</style>
     </div>
