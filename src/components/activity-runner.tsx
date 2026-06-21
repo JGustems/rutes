@@ -317,47 +317,48 @@ export default function ActivityRunner({
       </div>
 
       {/* Acció de deteccio (nomes si no esta completada) */}
-      {!completada && esperat && (
+      {!completada && esperat && (() => {
+        const infoCheckpointActual = checkpoints.find((c) => c.checkpointId === esperat.checkpointId);
+        const numReports = infoCheckpointActual?.numReportsPendents ?? 0;
+
+        return (
         <div className="bg-superficie border border-pi rounded-card p-5">
           <p className="text-xs text-text-secundari mb-1">
             Següent punt de control esperat
           </p>
           <p className="text-sm font-medium text-text-principal mb-3">
-            {checkpoints.find((c) => c.checkpointId === esperat.checkpointId)?.nom ?? ""}
+            {infoCheckpointActual?.nom ?? ""}
           </p>
 
-          {(() => {
-            const infoCheckpoint = checkpoints.find((c) => c.checkpointId === esperat.checkpointId);
-            const numReports = infoCheckpoint?.numReportsPendents ?? 0;
-            if (numReports >= llindarReports) {
-              return (
-                <div className="bg-alerta-clar text-alerta text-xs px-3 py-2 rounded-lg mb-3">
-                  Diversos usuaris han avisat que aquest punt pot tenir problemes.
-                  Si no detectes el tag, prova el codi manual o el QR, i si tampoc
-                  funciona, avisa&apos;ns amb el botó de sota.
-                </div>
-              );
-            }
-            return null;
-          })()}
+          {numReports >= llindarReports && (
+            <div className="bg-alerta-clar text-alerta text-xs px-3 py-2 rounded-lg mb-3">
+              Diversos usuaris han avisat que aquest punt pot tenir problemes.
+              Si no detectes el tag, prova el codi manual o el QR, i si tampoc
+              funciona, avisa&apos;ns amb el botó de sota.
+            </div>
+          )}
 
           <div className="flex flex-col gap-3">
-            <button
-              onClick={escoltarNFC}
-              disabled={!nfcDisponible}
-              className="w-full bg-pi text-white rounded-lg py-2.5 text-sm font-medium hover:bg-pi-fosc transition-colors disabled:opacity-40"
-            >
-              {nfcDisponible ? "Escoltar NFC" : "NFC no disponible en aquest navegador"}
-            </button>
+            {infoCheckpointActual?.tagTipus === "nfc" && (
+              <button
+                onClick={escoltarNFC}
+                disabled={!nfcDisponible}
+                className="w-full bg-pi text-white rounded-lg py-2.5 text-sm font-medium hover:bg-pi-fosc transition-colors disabled:opacity-40"
+              >
+                {nfcDisponible ? "Escoltar NFC" : "NFC no disponible en aquest navegador"}
+              </button>
+            )}
 
             <div className="flex gap-2">
-              <button
-                onClick={connectarBLE}
-                disabled={bleConnectant}
-                className="flex-1 bg-cel text-white rounded-lg py-2.5 text-sm font-medium hover:bg-cel-fosc transition-colors disabled:opacity-50"
-              >
-                {bleConnectant ? "Connectant..." : "Connectar Bluetooth"}
-              </button>
+              {infoCheckpointActual?.tagTipus === "ble" && (
+                <button
+                  onClick={connectarBLE}
+                  disabled={bleConnectant}
+                  className="flex-1 bg-cel text-white rounded-lg py-2.5 text-sm font-medium hover:bg-cel-fosc transition-colors disabled:opacity-50"
+                >
+                  {bleConnectant ? "Connectant..." : "Connectar Bluetooth"}
+                </button>
+              )}
               <QrScannerButton onScan={(codi) => registrarPas(codi, "manual")} />
             </div>
 
@@ -380,7 +381,8 @@ export default function ActivityRunner({
             <AvisarTagButton checkpointId={esperat.checkpointId} />
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Progres */}
       <div className="bg-superficie border border-vora rounded-card p-5">
