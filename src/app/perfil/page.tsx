@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { sql } from "@/lib/db";
 import Link from "next/link";
 import AliesForm from "./alies-form";
+import DadesPersonalsForm from "./dades-personals-form";
 
 export const dynamic = "force-dynamic";
 
@@ -49,14 +50,12 @@ export default async function PerfilPage() {
           </Link>
         </div>
 
-        {/* Dades personals */}
-        <div className="bg-superficie border border-vora rounded-card p-5 mb-6">
-          <p className="text-lg font-medium text-text-principal mb-1">{usuari.nom}</p>
-          <p className="text-sm text-text-secundari mb-1">{usuari.email}</p>
-          <p className="text-xs text-text-secundari">
-            {GENERE_LABELS[usuari.genere] ?? usuari.genere}
-          </p>
-        </div>
+       {/* Dades personals */}
+        <DadesPersonalsForm
+          nomActual={usuari.nom}
+          email={usuari.email}
+          genereActual={usuari.genere}
+        />
 
         {/* Alies per als ranquings */}
         <AliesForm aliesActual={usuari.alies} />
