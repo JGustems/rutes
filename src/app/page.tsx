@@ -6,30 +6,32 @@ export default function LandingPage() {
     <main className="min-h-screen bg-fons">
 
       
-      {/* Capcalera amb foto real de muntanya */}
+     {/* Capcalera amb foto real de muntanya */}
       <div className="relative px-4 py-20 text-center overflow-hidden">
         <Image
           src="/images/hero-banner.jpg"
           alt="Estany de muntanya al Pirineu"
           fill
           priority
-          className="object-cover -z-10"
+          className="object-cover"
         />
-        <div className="absolute inset-0 bg-black/45 -z-10" />
+        <div className="absolute inset-0 bg-black/45" />
 
-        <h1 className="text-3xl font-semibold text-white mb-3">
-          Fita
-        </h1>
-        <p className="text-base text-white/90 max-w-md mx-auto leading-relaxed">
-          Cronometra&apos;t a tu mateix en rutes de muntanya, carretera i BTT,
-          al teu ritme i quan vulguis.
-        </p>
-        <Link
-          href="/rutes"
-          className="inline-block mt-6 bg-white text-pi-fosc font-medium text-sm px-6 py-3 rounded-lg hover:bg-fons transition-colors"
-        >
-          Veure les rutes disponibles
-        </Link>
+        <div className="relative z-10">
+          <h1 className="text-3xl font-semibold text-white mb-3">
+            Fita
+          </h1>
+          <p className="text-base text-white/90 max-w-md mx-auto leading-relaxed">
+            Cronometra&apos;t a tu mateix en rutes de muntanya, carretera i BTT,
+            al teu ritme i quan vulguis.
+          </p>
+          <Link
+            href="/rutes"
+            className="inline-block mt-6 bg-white text-pi-fosc font-medium text-sm px-6 py-3 rounded-lg hover:bg-fons transition-colors"
+          >
+            Veure les rutes disponibles
+          </Link>
+        </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-12">
