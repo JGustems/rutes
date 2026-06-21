@@ -242,7 +242,7 @@ export default function ActivityRunner({
         </button>
 
         {mostrantAvis && (
-          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center p-4">
             <div className="bg-superficie rounded-card max-w-sm w-full p-6">
               <h3 className="text-base font-semibold text-text-principal mb-3">
                 Abans de començar
