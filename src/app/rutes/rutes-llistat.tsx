@@ -39,13 +39,7 @@ const ORDENACIONS = [
 
 export default function RutesLlistat({ rutes }: { rutes: Ruta[] }) {
   const [cerca, setCerca] = useState("");
-  const [categoria, setCategoria] = useState<string>("totes");
   const [ordenacio, setOrdenacio] = useState("recents");
-
-  const categories = useMemo(() => {
-    const presents = new Set(rutes.map((r) => r.categoria));
-    return Object.entries(CATEGORIA_LABELS).filter(([key]) => presents.has(key));
-  }, [rutes]);
 
   const rutesFiltrades = useMemo(() => {
     let resultat = rutes;
@@ -57,10 +51,6 @@ export default function RutesLlistat({ rutes }: { rutes: Ruta[] }) {
           r.nom.toLowerCase().includes(text) ||
           (r.ubicacio ?? "").toLowerCase().includes(text)
       );
-    }
-
-    if (categoria !== "totes") {
-      resultat = resultat.filter((r) => r.categoria === categoria);
     }
 
     resultat = [...resultat];
@@ -76,15 +66,13 @@ export default function RutesLlistat({ rutes }: { rutes: Ruta[] }) {
           (a, b) => (b.desnivell_positiu_m ?? 0) - (a.desnivell_positiu_m ?? 0)
         );
         break;
-      // "recents" ja ve ordenat de la consulta original, no cal tocar-ho
     }
 
     return resultat;
-  }, [rutes, cerca, categoria, ordenacio]);
+  }, [rutes, cerca, ordenacio]);
 
   return (
     <div>
-      {/* Cercador */}
       <input
         type="text"
         value={cerca}
@@ -93,34 +81,6 @@ export default function RutesLlistat({ rutes }: { rutes: Ruta[] }) {
         className="w-full border border-vora rounded-lg px-3 py-2 text-sm text-text-principal bg-superficie focus:outline-none focus:border-pi mb-3"
       />
 
-      {/* Filtre de categoria */}
-      <div className="flex gap-2 overflow-x-auto mb-3 pb-1">
-        <button
-          onClick={() => setCategoria("totes")}
-          className={`text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${
-            categoria === "totes"
-              ? "bg-terra text-white"
-              : "bg-superficie border border-vora text-text-secundari"
-          }`}
-        >
-          Totes
-        </button>
-        {categories.map(([value, label]) => (
-          <button
-            key={value}
-            onClick={() => setCategoria(value)}
-            className={`text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${
-              categoria === value
-                ? "bg-terra text-white"
-                : "bg-superficie border border-vora text-text-secundari"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* Ordenacio */}
       <div className="flex items-center justify-between mb-6">
         <p className="text-xs text-text-secundari">
           {rutesFiltrades.length} {rutesFiltrades.length === 1 ? "ruta" : "rutes"}
@@ -136,7 +96,6 @@ export default function RutesLlistat({ rutes }: { rutes: Ruta[] }) {
         </select>
       </div>
 
-      {/* Llistat */}
       {rutesFiltrades.length === 0 ? (
         <div className="bg-superficie border border-vora rounded-card p-12 text-center">
           <p className="text-text-secundari">
