@@ -77,8 +77,7 @@ export default async function RutaDetallPage({
             <RouteMap geojson={geojson} />
           </div>
         )}
-
-        {teTrack && (
+{teTrack && (
           <div className="flex gap-2 mb-6">
             
               href={`/api/rutes/${id}/descarregar?format=gpx`}
