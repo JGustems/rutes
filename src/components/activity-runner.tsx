@@ -41,7 +41,8 @@ export default function ActivityRunner({
   const [missatge, setMissatge] = useState<{ tipus: "ok" | "error"; text: string } | null>(null);
   const [nfcDisponible, setNfcDisponible] = useState(false);
   const [bleConnectant, setBleConnectant] = useState(false);
-  const [sincronitzant, setSincronitzant] = useState(false);
+const [sincronitzant, setSincronitzant] = useState(false);
+  const [mostrantAvis, setMostrantAvis] = useState(false);
 
   useEffect(() => {
     const existent = obtenirActivitat();
@@ -198,9 +199,51 @@ export default function ActivityRunner({
         <p className="text-sm text-text-secundari mb-4">
           Preparat per començar la ruta &quot;{routeNom}&quot;?
         </p>
-        <button onClick={() => iniciar("manual")} className="w-full bg-terra text-white rounded-lg py-3 text-sm font-medium hover:bg-terra-fosc transition-colors">
+        <button
+          onClick={() => setMostrantAvis(true)}
+          className="w-full bg-terra text-white rounded-lg py-3 text-sm font-medium hover:bg-terra-fosc transition-colors"
+        >
           Iniciar activitat
         </button>
+
+        {mostrantAvis && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+            <div className="bg-superficie rounded-card max-w-sm w-full p-6">
+              <h3 className="text-base font-semibold text-text-principal mb-3">
+                Abans de començar
+              </h3>
+              <ul className="text-sm text-text-principal flex flex-col gap-2 mb-5 list-disc pl-5">
+                <li>Això no és una competició: vas al teu ritme i sota la teva responsabilitat.</li>
+                <li>No controlem l&apos;estat del terreny ni dels tags. Vés equipat i amb seny.</li>
+                <li>Respecta el medi: no deixis brossa i no surtis dels camins marcats.</li>
+              </ul>
+              <p className="text-xs text-text-secundari mb-4">
+                Consulta les{" "}
+                <a href="/termes" target="_blank" className="text-pi font-medium hover:underline">
+                  condicions d&apos;ús
+                </a>{" "}
+                completes en qualsevol moment.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setMostrantAvis(false);
+                    iniciar("manual");
+                  }}
+                  className="flex-1 bg-terra text-white rounded-lg py-2.5 text-sm font-medium hover:bg-terra-fosc transition-colors"
+                >
+                  Entesos, comencem
+                </button>
+                <button
+                  onClick={() => setMostrantAvis(false)}
+                  className="text-sm text-text-secundari px-3 hover:text-text-principal transition-colors"
+                >
+                  Cancel·lar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
