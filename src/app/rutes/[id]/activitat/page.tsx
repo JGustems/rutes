@@ -80,13 +80,13 @@ export default async function RutaDetallPage({
 
         {teTrack && (
           <div className="flex gap-2 mb-6">
-            
+            <a
               href={`/api/rutes/${id}/descarregar?format=gpx`}
               className="text-xs text-pi font-medium border border-pi rounded-lg px-3 py-1.5 hover:bg-pi-clar transition-colors"
             >
               Descarregar GPX
             </a>
-            
+            <a
               href={`/api/rutes/${id}/descarregar?format=kml`}
               className="text-xs text-pi font-medium border border-pi rounded-lg px-3 py-1.5 hover:bg-pi-clar transition-colors"
             >
