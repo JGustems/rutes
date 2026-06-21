@@ -10,7 +10,7 @@ function NavLink({ href, children, className }: { href: string; children: React.
   return (
     <Link
       href={href}
-      className={`text-sm px-2.5 py-1 rounded-lg transition-colors ${
+      className={`text-xs sm:text-sm px-1.5 sm:px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap shrink-0 ${
         actiu
           ? "bg-pi-clar text-pi-fosc font-medium"
           : `text-text-secundari hover:text-text-principal ${className ?? ""}`
