@@ -5,6 +5,7 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen bg-fons">
 
+      
       {/* Capcalera amb foto real de muntanya */}
       <div className="relative px-4 py-20 text-center overflow-hidden">
         <Image
