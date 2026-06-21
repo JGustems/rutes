@@ -67,6 +67,26 @@ export default async function RutaDetallPage({
     order by rc.ordre asc
   `;
 
+  // Llindar de reports configurat des de l'admin (per defecte un
+  // numero molt alt si encara no existeix la configuracio)
+  const configRows = await sql`
+    select valor from app_config where clau = 'llindar_reports_tag' limit 1
+  `;
+  const llindarReports = configRows[0] ? parseInt(configRows[0].valor) : 999999;
+
+  // Comptar reports pendents per cada checkpoint d'aquesta ruta
+  const reportsRows = await sql`
+    select checkpoint_id, count(*) as total
+    from tag_reports
+    where estat = 'pendent' and checkpoint_id in (
+      select checkpoint_id from route_checkpoints where route_id = ${id}
+    )
+    group by checkpoint_id
+  `;
+  const reportsPerCheckpoint = new Map(
+    reportsRows.map((r: any) => [r.checkpoint_id, parseInt(r.total)])
+  );
+
   return (
     <main className="min-h-screen bg-fons">
       <div className="max-w-2xl mx-auto px-4 py-6">
@@ -93,10 +113,16 @@ export default async function RutaDetallPage({
 
         {teTrack && (
           <div className="flex gap-2 mb-6">
-            <a href={`/api/rutes/${id}/descarregar?format=gpx`} className="text-xs text-pi font-medium border border-pi rounded-lg px-3 py-1.5 hover:bg-pi-clar transition-colors">
+            <a
+              href={`/api/rutes/${id}/descarregar?format=gpx`}
+              className="text-xs text-pi font-medium border border-pi rounded-lg px-3 py-1.5 hover:bg-pi-clar transition-colors"
+            >
               Descarregar GPX
             </a>
-            <a href={`/api/rutes/${id}/descarregar?format=kml`} className="text-xs text-pi font-medium border border-pi rounded-lg px-3 py-1.5 hover:bg-pi-clar transition-colors">
+            <a
+              href={`/api/rutes/${id}/descarregar?format=kml`}
+              className="text-xs text-pi font-medium border border-pi rounded-lg px-3 py-1.5 hover:bg-pi-clar transition-colors"
+            >
               Descarregar KML
             </a>
           </div>
@@ -162,6 +188,7 @@ export default async function RutaDetallPage({
           <ActivityRunner
             routeId={id}
             routeNom={ruta.nom}
+            llindarReports={llindarReports}
             checkpoints={checkpointsPerActivitat.map((c: any) => ({
               checkpointId: c.checkpoint_id,
               nom: c.nom,
@@ -170,6 +197,7 @@ export default async function RutaDetallPage({
               esFi: c.es_fi,
               tagCodi: c.tag_codi,
               tagTipus: c.tag_tipus,
+              numReportsPendents: reportsPerCheckpoint.get(c.checkpoint_id) ?? 0,
             }))}
           />
         ) : (
