@@ -11,6 +11,7 @@ import {
   activitatCompletada,
 } from "@/lib/activity-storage";
 import QrScannerButton from "./qr-scanner-button";
+import ReportarTagButton from "./reportar-tag-button";
 
 type CheckpointInfo = {
   checkpointId: string;
@@ -225,25 +226,25 @@ const [sincronitzant, setSincronitzant] = useState(false);
                 completes en qualsevol moment.
               </p>
               <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setMostrantAvis(false);
-                    iniciar("manual");
-                  }}
-                  className="flex-1 bg-terra text-white rounded-lg py-2.5 text-sm font-medium hover:bg-terra-fosc transition-colors"
-                >
-                  Entesos, comencem
-                </button>
-                <button
-                  onClick={() => setMostrantAvis(false)}
-                  className="text-sm text-text-secundari px-3 hover:text-text-principal transition-colors"
-                >
-                  Cancel·lar
-                </button>
-              </div>
+              <input
+                type="text"
+                value={codiManual}
+                onChange={(e) => setCodiManual(e.target.value)}
+                placeholder="Introdueix el codi manualment"
+                className="flex-1 border border-vora rounded-lg px-3 py-2 text-sm text-text-principal bg-fons focus:outline-none focus:border-pi"
+              />
+              <button
+                onClick={enviarCodiManual}
+                className="bg-terra text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-terra-fosc transition-colors"
+              >
+                Validar
+              </button>
             </div>
+
+            <ReportarTagButton checkpointId={esperat.checkpointId} />
           </div>
-        )}
+        </div>
+      )}
       </div>
     );
   }
