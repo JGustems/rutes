@@ -319,8 +319,11 @@ export default function ActivityRunner({
       {/* Acció de deteccio (nomes si no esta completada) */}
       {!completada && esperat && (
         <div className="bg-superficie border border-pi rounded-card p-5">
-          <p className="text-xs text-text-secundari mb-3">
+          <p className="text-xs text-text-secundari mb-1">
             Següent punt de control esperat
+          </p>
+          <p className="text-sm font-medium text-text-principal mb-3">
+            {checkpoints.find((c) => c.checkpointId === esperat.checkpointId)?.nom ?? ""}
           </p>
 
           {(() => {
