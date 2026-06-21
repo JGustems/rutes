@@ -11,7 +11,7 @@ import {
   activitatCompletada,
 } from "@/lib/activity-storage";
 import QrScannerButton from "./qr-scanner-button";
-import ReportarTagButton from "./reportar-tag-button";
+import AvisarTagButton from "./avisar-tag-button";
 
 type CheckpointInfo = {
   checkpointId: string;
@@ -21,6 +21,7 @@ type CheckpointInfo = {
   esFi: boolean;
   tagCodi: string | null;
   tagTipus: "nfc" | "ble" | null;
+  numReportsPendents?: number;
 };
 
 function normalitzarCodi(codi: string): string {
@@ -31,10 +32,12 @@ export default function ActivityRunner({
   routeId,
   routeNom,
   checkpoints,
+  llindarReports,
 }: {
   routeId: string;
   routeNom: string;
   checkpoints: CheckpointInfo[];
+  llindarReports: number;
 }) {
   const router = useRouter();
   const [activitat, setActivitat] = useState<ActivitatLocal | null>(null);
@@ -42,9 +45,10 @@ export default function ActivityRunner({
   const [missatge, setMissatge] = useState<{ tipus: "ok" | "error"; text: string } | null>(null);
   const [nfcDisponible, setNfcDisponible] = useState(false);
   const [bleConnectant, setBleConnectant] = useState(false);
-const [sincronitzant, setSincronitzant] = useState(false);
+  const [sincronitzant, setSincronitzant] = useState(false);
   const [mostrantAvis, setMostrantAvis] = useState(false);
 
+  // Carregar activitat existent del localStorage en muntar
   useEffect(() => {
     const existent = obtenirActivitat();
     if (existent && existent.routeId === routeId) {
@@ -53,6 +57,8 @@ const [sincronitzant, setSincronitzant] = useState(false);
     setNfcDisponible(typeof window !== "undefined" && "NDEFReader" in window);
   }, [routeId]);
 
+  // Forçar un rerenderitzat cada segon mentre hi hagi una
+  // activitat en curs, per actualitzar el cronometre en directe
   const [, forcarActualitzacio] = useState(0);
   useEffect(() => {
     if (!activitat || activitatCompletada(activitat)) return;
@@ -80,7 +86,10 @@ const [sincronitzant, setSincronitzant] = useState(false);
       }
 
       if (normalitzarCodi(esperat.tagCodi ?? "") !== codiDetectat) {
-        mostrarMissatge("error", "Aquest codi no correspon al següent punt de control esperat");
+        mostrarMissatge(
+          "error",
+          "Aquest codi no correspon al següent punt de control esperat"
+        );
         return actual;
       }
 
@@ -95,6 +104,8 @@ const [sincronitzant, setSincronitzant] = useState(false);
 
       const actualitzada: ActivitatLocal = {
         ...actual,
+        // El cronometre comença a comptar al primer pas, no al
+        // moment de prementar "Iniciar activitat"
         iniciadaEl: esPrimerPas ? araIso : actual.iniciadaEl,
         passos: [...actual.passos, nouPas],
       };
@@ -111,7 +122,10 @@ const [sincronitzant, setSincronitzant] = useState(false);
       .map((c) => ({ checkpointId: c.checkpointId, ordre: c.ordre, tagCodi: c.tagCodi }));
 
     const nova: ActivitatLocal = {
-      localId: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+      localId:
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : String(Date.now()),
       routeId,
       sentit: "anada",
       iniciadaEl: null,
@@ -130,13 +144,16 @@ const [sincronitzant, setSincronitzant] = useState(false);
     setActivitat(null);
   }
 
+  // --------------------------------------------------------
+  // NFC
+  // --------------------------------------------------------
   async function escoltarNFC() {
     if (!nfcDisponible) {
       mostrarMissatge("error", "Aquest dispositiu o navegador no suporta NFC");
       return;
     }
     try {
-      // @ts-ignore
+      // @ts-ignore - Web NFC API no te tipus oficials encara
       const reader = new (window as any).NDEFReader();
       await reader.scan();
       mostrarMissatge("ok", "Escoltant NFC... acosta el mòbil al tag");
@@ -149,6 +166,9 @@ const [sincronitzant, setSincronitzant] = useState(false);
     }
   }
 
+  // --------------------------------------------------------
+  // BLE
+  // --------------------------------------------------------
   async function connectarBLE() {
     if (typeof navigator === "undefined" || !("bluetooth" in navigator)) {
       mostrarMissatge("error", "Aquest dispositiu o navegador no suporta Bluetooth");
@@ -156,7 +176,11 @@ const [sincronitzant, setSincronitzant] = useState(false);
     }
     setBleConnectant(true);
     try {
-      const device = await (navigator as any).bluetooth.requestDevice({ acceptAllDevices: true });
+      const device = await (navigator as any).bluetooth.requestDevice({
+        acceptAllDevices: true,
+      });
+      // L'identificador exposat pel navegador (pot variar segons el
+      // dispositiu; en molts casos cal fer servir el nom anunciat)
       const codi = device.name || device.id;
       registrarPas(codi, "ble");
     } catch (err) {
@@ -166,12 +190,18 @@ const [sincronitzant, setSincronitzant] = useState(false);
     }
   }
 
+  // --------------------------------------------------------
+  // Manual
+  // --------------------------------------------------------
   function enviarCodiManual() {
     if (!codiManual.trim()) return;
     registrarPas(codiManual.trim(), "manual");
     setCodiManual("");
   }
 
+  // --------------------------------------------------------
+  // Sincronitzar amb el servidor
+  // --------------------------------------------------------
   async function sincronitzar() {
     if (!activitat) return;
     setSincronitzant(true);
@@ -193,6 +223,10 @@ const [sincronitzant, setSincronitzant] = useState(false);
     esborrarActivitat();
     router.push("/historial");
   }
+
+  // --------------------------------------------------------
+  // Render
+  // --------------------------------------------------------
 
   if (!activitat) {
     return (
@@ -226,6 +260,105 @@ const [sincronitzant, setSincronitzant] = useState(false);
                 completes en qualsevol moment.
               </p>
               <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setMostrantAvis(false);
+                    iniciar("manual");
+                  }}
+                  className="flex-1 bg-terra text-white rounded-lg py-2.5 text-sm font-medium hover:bg-terra-fosc transition-colors"
+                >
+                  Entesos, comencem
+                </button>
+                <button
+                  onClick={() => setMostrantAvis(false)}
+                  className="text-sm text-text-secundari px-3 hover:text-text-principal transition-colors"
+                >
+                  Cancel·lar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const esperat = seguentCheckpointEsperat(activitat);
+  const completada = activitatCompletada(activitat);
+  const checkpointsOrdenats = [...checkpoints].sort((a, b) => a.ordre - b.ordre);
+
+  return (
+    <div className="flex flex-col gap-4">
+
+      {missatge && (
+        <div
+          className={`text-sm px-4 py-3 rounded-lg ${
+            missatge.tipus === "ok"
+              ? "bg-exit-clar text-exit-fosc"
+              : "bg-alerta-clar text-alerta"
+          }`}
+        >
+          {missatge.text}
+        </div>
+      )}
+
+      {/* Temps total */}
+      <div className="bg-superficie border border-vora rounded-card p-5 text-center">
+        <p className="text-xs text-text-secundari uppercase tracking-wide mb-1">
+          {completada
+            ? "Activitat completada"
+            : activitat.iniciadaEl
+            ? "En curs"
+            : "Esperant el primer punt de control"}
+        </p>
+        <p className="text-2xl font-medium text-text-principal font-mono">
+          {activitat.iniciadaEl ? formatDuracio(activitat.iniciadaEl) : "00:00:00"}
+        </p>
+      </div>
+
+      {/* Acció de deteccio (nomes si no esta completada) */}
+      {!completada && esperat && (
+        <div className="bg-superficie border border-pi rounded-card p-5">
+          <p className="text-xs text-text-secundari mb-3">
+            Següent punt de control esperat
+          </p>
+
+          {(() => {
+            const infoCheckpoint = checkpoints.find((c) => c.checkpointId === esperat.checkpointId);
+            const numReports = infoCheckpoint?.numReportsPendents ?? 0;
+            if (numReports >= llindarReports) {
+              return (
+                <div className="bg-alerta-clar text-alerta text-xs px-3 py-2 rounded-lg mb-3">
+                  Diversos usuaris han avisat que aquest punt pot tenir problemes.
+                  Si no detectes el tag, prova el codi manual o el QR, i si tampoc
+                  funciona, avisa&apos;ns amb el botó de sota.
+                </div>
+              );
+            }
+            return null;
+          })()}
+
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={escoltarNFC}
+              disabled={!nfcDisponible}
+              className="w-full bg-pi text-white rounded-lg py-2.5 text-sm font-medium hover:bg-pi-fosc transition-colors disabled:opacity-40"
+            >
+              {nfcDisponible ? "Escoltar NFC" : "NFC no disponible en aquest navegador"}
+            </button>
+
+            <div className="flex gap-2">
+              <button
+                onClick={connectarBLE}
+                disabled={bleConnectant}
+                className="flex-1 bg-cel text-white rounded-lg py-2.5 text-sm font-medium hover:bg-cel-fosc transition-colors disabled:opacity-50"
+              >
+                {bleConnectant ? "Connectant..." : "Connectar Bluetooth"}
+              </button>
+              <QrScannerButton onScan={(codi) => registrarPas(codi, "manual")} />
+            </div>
+
+            <div className="flex gap-2">
               <input
                 type="text"
                 value={codiManual}
@@ -241,74 +374,26 @@ const [sincronitzant, setSincronitzant] = useState(false);
               </button>
             </div>
 
-            <ReportarTagButton checkpointId={esperat.checkpointId} />
-          </div>
-        </div>
-      )}
-      </div>
-    );
-  }
-
-  const esperat = seguentCheckpointEsperat(activitat);
-  const completada = activitatCompletada(activitat);
-  const checkpointsOrdenats = [...checkpoints].sort((a, b) => a.ordre - b.ordre);
-
-  return (
-    <div className="flex flex-col gap-4">
-      {missatge && (
-        <div className={`text-sm px-4 py-3 rounded-lg ${missatge.tipus === "ok" ? "bg-exit-clar text-exit-fosc" : "bg-alerta-clar text-alerta"}`}>
-          {missatge.text}
-        </div>
-      )}
-
-      <div className="bg-superficie border border-vora rounded-card p-5 text-center">
-        <p className="text-xs text-text-secundari uppercase tracking-wide mb-1">
-          {completada ? "Activitat completada" : activitat.iniciadaEl ? "En curs" : "Esperant el primer punt de control"}
-        </p>
-        <p className="text-2xl font-medium text-text-principal font-mono">
-          {activitat.iniciadaEl ? formatDuracio(activitat.iniciadaEl) : "00:00:00"}
-        </p>
-      </div>
-
-      {!completada && esperat && (
-        <div className="bg-superficie border border-pi rounded-card p-5">
-          <p className="text-xs text-text-secundari mb-3">Següent punt de control esperat</p>
-          <div className="flex flex-col gap-3">
-            <button onClick={escoltarNFC} disabled={!nfcDisponible} className="w-full bg-pi text-white rounded-lg py-2.5 text-sm font-medium hover:bg-pi-fosc transition-colors disabled:opacity-40">
-              {nfcDisponible ? "Escoltar NFC" : "NFC no disponible en aquest navegador"}
-            </button>
-
-            <div className="flex gap-2">
-              <button onClick={connectarBLE} disabled={bleConnectant} className="flex-1 bg-cel text-white rounded-lg py-2.5 text-sm font-medium hover:bg-cel-fosc transition-colors disabled:opacity-50">
-                {bleConnectant ? "Connectant..." : "Connectar Bluetooth"}
-              </button>
-              <QrScannerButton onScan={(codi) => registrarPas(codi, "manual")} />
-            </div>
-
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={codiManual}
-                onChange={(e) => setCodiManual(e.target.value)}
-                placeholder="Introdueix el codi manualment"
-                className="flex-1 border border-vora rounded-lg px-3 py-2 text-sm text-text-principal bg-fons focus:outline-none focus:border-pi"
-              />
-              <button onClick={enviarCodiManual} className="bg-terra text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-terra-fosc transition-colors">
-                Validar
-              </button>
-            </div>
+            <AvisarTagButton checkpointId={esperat.checkpointId} />
           </div>
         </div>
       )}
 
+      {/* Progres */}
       <div className="bg-superficie border border-vora rounded-card p-5">
-        <p className="text-xs font-medium text-text-secundari uppercase tracking-wide mb-3">Progrés</p>
+        <p className="text-xs font-medium text-text-secundari uppercase tracking-wide mb-3">
+          Progrés
+        </p>
         <div className="flex flex-col gap-2">
           {checkpointsOrdenats.map((cp) => {
             const fet = activitat.passos.find((p) => p.checkpointId === cp.checkpointId);
             return (
               <div key={cp.checkpointId} className="flex items-center gap-3">
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0 ${fet ? "bg-exit text-white" : "bg-fons border border-vora text-text-secundari"}`}>
+                <span
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0 ${
+                    fet ? "bg-exit text-white" : "bg-fons border border-vora text-text-secundari"
+                  }`}
+                >
                   {fet ? "✓" : cp.ordre}
                 </span>
                 <span className="text-sm text-text-principal">
@@ -322,12 +407,20 @@ const [sincronitzant, setSincronitzant] = useState(false);
         </div>
       </div>
 
+      {/* Accions */}
       {completada ? (
-        <button onClick={sincronitzar} disabled={sincronitzant} className="w-full bg-terra text-white rounded-lg py-3 text-sm font-medium hover:bg-terra-fosc transition-colors disabled:opacity-50">
+        <button
+          onClick={sincronitzar}
+          disabled={sincronitzant}
+          className="w-full bg-terra text-white rounded-lg py-3 text-sm font-medium hover:bg-terra-fosc transition-colors disabled:opacity-50"
+        >
           {sincronitzant ? "Sincronitzant..." : "Finalitzar i desar activitat"}
         </button>
       ) : (
-        <button onClick={abandonar} className="w-full bg-superficie border border-alerta text-alerta rounded-lg py-2.5 text-sm font-medium hover:bg-alerta-clar transition-colors">
+        <button
+          onClick={abandonar}
+          className="w-full bg-superficie border border-alerta text-alerta rounded-lg py-2.5 text-sm font-medium hover:bg-alerta-clar transition-colors"
+        >
           Abandonar activitat
         </button>
       )}
