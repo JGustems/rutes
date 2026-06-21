@@ -29,6 +29,7 @@ export default async function ActivitatPage({
     select geojson from route_tracks where route_id = ${id} limit 1
   `;
   const geojson = trackRows[0]?.geojson ?? null;
+  const teTrack = trackRows.length > 0;
 
   const checkpointsPerActivitat = await sql`
     select c.id as checkpoint_id, c.nom, rc.ordre, rc.es_inici, rc.es_fi, t.codi as tag_codi, t.tipus as tag_tipus
@@ -70,8 +71,25 @@ export default async function ActivitatPage({
         </div>
 
         {geojson && (
-          <div className="mb-4">
+          <div className="mb-3">
             <RouteMap geojson={geojson} />
+          </div>
+        )}
+
+        {teTrack && (
+          <div className="flex gap-2 mb-6">
+            <a
+              href={`/api/rutes/${id}/descarregar?format=gpx`}
+              className="text-xs text-pi font-medium border border-pi rounded-lg px-3 py-1.5 hover:bg-pi-clar transition-colors"
+            >
+              Descarregar GPX
+            </a>
+            <a
+              href={`/api/rutes/${id}/descarregar?format=kml`}
+              className="text-xs text-pi font-medium border border-pi rounded-lg px-3 py-1.5 hover:bg-pi-clar transition-colors"
+            >
+              Descarregar KML
+            </a>
           </div>
         )}
 
