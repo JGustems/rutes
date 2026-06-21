@@ -47,7 +47,7 @@ const config: Config = {
         superficie: "#FFFFFF", // fons de targetes sobre el fons crema
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        sans: ["var(--font-montserrat)", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "monospace"],
       },
       borderRadius: {
