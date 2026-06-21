@@ -18,6 +18,13 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-black/45" />
 
         <div className="relative z-10">
+          <Image
+            src="/images/logo-blanc.png"
+            alt=""
+            width={56}
+            height={56}
+            className="mx-auto mb-3"
+          />
           <h1 className="text-3xl font-semibold text-white mb-3">
             Fita
           </h1>
