@@ -8,7 +8,7 @@ export default function LandingPage() {
       {/* Capcalera amb foto real de muntanya */}
       <div className="relative px-4 py-20 text-center overflow-hidden">
         <Image
-          src="/images/hero-muntanya.jpg"
+          src="/images/hero-banner.jpg"
           alt="Estany de muntanya al Pirineu"
           fill
           priority
