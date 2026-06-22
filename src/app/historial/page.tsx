@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { sql } from "@/lib/db";
 import Link from "next/link";
+import CompartirButton from "@/components/compartir-button";
 
 export const dynamic = "force-dynamic";
 
@@ -38,8 +39,13 @@ export default async function HistorialPage() {
 
   const activitats = await sql`
     select
-      a.id, a.estat, a.sentit, a.iniciada_el, a.finalitzada_el,
-      r.nom as ruta_nom, r.id as ruta_id,
+      a.id,
+      a.estat,
+      a.sentit,
+      a.iniciada_el,
+      a.finalitzada_el,
+      r.nom as ruta_nom,
+      r.id as ruta_id,
       (a.finalitzada_el - a.iniciada_el) as temps_total,
       count(cp.id) as controls_validats,
       (
@@ -67,7 +73,9 @@ export default async function HistorialPage() {
 
         {activitats.length === 0 ? (
           <div className="bg-superficie border border-vora rounded-card p-12 text-center">
-            <p className="text-text-secundari mb-4">Encara no has completat cap activitat.</p>
+            <p className="text-text-secundari mb-4">
+              Encara no has completat cap activitat.
+            </p>
             <Link href="/" className="text-sm text-pi font-medium hover:underline">
               Explora les rutes disponibles →
             </Link>
@@ -75,7 +83,11 @@ export default async function HistorialPage() {
         ) : (
           <div className="flex flex-col gap-3">
             {activitats.map((a: any) => (
-              <Link key={a.id} href={`/rutes/${a.ruta_id}`} className="bg-superficie border border-vora rounded-card px-4 py-4 block hover:shadow-sm transition-shadow">
+              <Link
+                key={a.id}
+                href={`/rutes/${a.ruta_id}`}
+                className="bg-superficie border border-vora rounded-card px-4 py-4 block hover:shadow-sm transition-shadow"
+              >
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-medium text-text-principal">{a.ruta_nom}</p>
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${ESTAT_COLORS[a.estat]}`}>
@@ -84,7 +96,11 @@ export default async function HistorialPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-text-secundari">
-                    {new Date(a.iniciada_el).toLocaleDateString("ca-ES", { day: "numeric", month: "long", year: "numeric" })}
+                    {new Date(a.iniciada_el).toLocaleDateString("ca-ES", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
                     {" · "}
                     {a.controls_validats} de {a.controls_esperats} controls
                   </p>
@@ -94,6 +110,11 @@ export default async function HistorialPage() {
                     </p>
                   )}
                 </div>
+                {a.estat === "completada" && (
+                  <div className="mt-2 pt-2 border-t border-vora">
+                    <CompartirButton activityId={a.id} />
+                  </div>
+                )}
               </Link>
             ))}
           </div>
