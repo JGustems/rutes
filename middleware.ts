@@ -5,10 +5,15 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
 
-  const rutesPrivades = ["/perfil", "/activitat", "/historial"];
+  // Rutes que requereixen estar autenticat
+  const rutesPrivades = ["/perfil", "/historial"];
+
+  // Rutes que requereixen ser administrador
   const rutesAdmin = ["/admin"];
 
-  const esPrivada = rutesPrivades.some((r) => pathname.startsWith(r));
+  const esPrivada =
+    rutesPrivades.some((r) => pathname.startsWith(r)) ||
+    (pathname.startsWith("/rutes/") && pathname.endsWith("/activitat"));
   const esAdmin = rutesAdmin.some((r) => pathname.startsWith(r));
 
   if ((esPrivada || esAdmin) && !session) {
