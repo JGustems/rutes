@@ -62,7 +62,7 @@ export default function QrScannerButton({
       </button>
 
       {obert && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex flex-col items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/80 z-[2000] flex flex-col items-center justify-center p-4">
           <div className="w-full max-w-sm bg-superficie rounded-card overflow-hidden">
             <video ref={videoRef} className="w-full aspect-square object-cover" />
             <div className="p-4">
