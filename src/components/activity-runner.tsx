@@ -159,11 +159,14 @@ export default function ActivityRunner({
       mostrarMissatge("ok", "Escoltant NFC... acosta el mòbil al tag");
       reader.onreading = (event: any) => {
         const serialNumber = event.serialNumber as string;
+        // DEBUG temporal
+        alert(`DEBUG serialNumber: "${serialNumber}" (tipus: ${typeof serialNumber}, buit: ${!serialNumber})`);
         registrarPas(serialNumber, "nfc");
       };
     } catch (err) {
       mostrarMissatge("error", "No s'ha pogut activar el lector NFC");
     }
+  }
   }
 
   // --------------------------------------------------------
