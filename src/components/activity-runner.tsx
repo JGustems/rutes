@@ -147,7 +147,7 @@ export default function ActivityRunner({
   // --------------------------------------------------------
   // NFC
   // --------------------------------------------------------
-  async function escoltarNFC() {
+ async function escoltarNFC() {
     if (!nfcDisponible) {
       mostrarMissatge("error", "Aquest dispositiu o navegador no suporta NFC");
       return;
@@ -159,14 +159,11 @@ export default function ActivityRunner({
       mostrarMissatge("ok", "Escoltant NFC... acosta el mòbil al tag");
       reader.onreading = (event: any) => {
         const serialNumber = event.serialNumber as string;
-        // DEBUG temporal
-        alert(`DEBUG serialNumber: "${serialNumber}" (tipus: ${typeof serialNumber}, buit: ${!serialNumber})`);
         registrarPas(serialNumber, "nfc");
       };
     } catch (err) {
       mostrarMissatge("error", "No s'ha pogut activar el lector NFC");
     }
-  }
   }
 
   // --------------------------------------------------------
