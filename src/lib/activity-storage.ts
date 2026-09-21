@@ -16,7 +16,8 @@ export type PasLocal = {
 export type ActivitatLocal = {
   localId: string;
   routeId: string;
-  sentit: "anada" | "tornada";
+  sentit: "anada" | "tornada" | "pendent"; // "pendent" fins que el segon tag
+                                             // confirma el sentit en rutes circulars
   iniciadaEl: string | null;
   fontInici: "nfc" | "ble" | "manual" | null;
   passos: PasLocal[];
@@ -55,11 +56,16 @@ export function esborrarActivitat() {
   window.localStorage.removeItem(STORAGE_KEY);
 }
 
+// Nomes te sentit cridar aquesta funcio quan el sentit ja esta
+// determinat (anada o tornada). Si el sentit es "pendent",
+// el component gestiona la logica especialment.
 export function seguentCheckpointEsperat(activitat: ActivitatLocal) {
+  if (activitat.sentit === "pendent") return null;
   const idsFets = new Set(activitat.passos.map((p) => p.checkpointId));
   return activitat.checkpointsEsperat.find((c) => !idsFets.has(c.checkpointId)) ?? null;
 }
 
 export function activitatCompletada(activitat: ActivitatLocal): boolean {
+  if (activitat.sentit === "pendent") return false;
   return seguentCheckpointEsperat(activitat) === null;
 }
