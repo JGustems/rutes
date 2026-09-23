@@ -54,7 +54,6 @@ export default async function CheckpointsPage({
     tagAssignat: cp.tag_id ? { id: cp.tag_id, codi: cp.tag_codi, tipus: cp.tag_tipus } : null,
   }));
 
-  // Tags actius que encara no estan assignats a cap checkpoint
   const tagsDisponiblesRaw = await sql`
     select id, codi, tipus
     from tags
@@ -65,9 +64,24 @@ export default async function CheckpointsPage({
   `;
   const tagsDisponibles = tagsDisponiblesRaw as { id: string; codi: string; tipus: string }[];
 
-  // Comprovar si la ruta ja te un track carregat
   const trackRows = await sql`select route_id from route_tracks where route_id = ${id} limit 1`;
   const teTrack = trackRows.length > 0;
+
+  // Checkpoints d'altres rutes que no estan ja assignats a aquesta ruta
+  // (per poder reutilitzar-los)
+  const idsJaAssignats = new Set([
+    ...checkpointsAnada.map((c: any) => c.id),
+    ...checkpointsTornada.map((c: any) => c.id),
+  ]);
+
+  const totsElsCheckpointsRaw = await sql`
+    select c.id, c.nom, c.latitud, c.longitud, t.codi as tag_codi
+    from checkpoints c
+    left join tags t on t.id = c.tag_id
+    order by c.nom asc
+  `;
+  const checkpointsExistents = (totsElsCheckpointsRaw as any[])
+    .filter((c) => !idsJaAssignats.has(c.id));
 
   return (
     <main className="min-h-screen bg-fons p-6">
@@ -76,11 +90,11 @@ export default async function CheckpointsPage({
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-2xl font-medium text-text-principal">{ruta.nom}</h1>
           <Link href="/admin/rutes" className="text-sm text-text-secundari hover:text-text-principal transition-colors">
-            ← Rutes
+            - Rutes
           </Link>
         </div>
         <p className="text-sm text-text-secundari mb-6">
-          Punts de control {ruta.bidireccional ? "· Ruta bidireccional" : ""}
+          Punts de control {ruta.bidireccional ? "- Ruta bidireccional" : ""}
         </p>
 
         <TrackForm routeId={id} wikilocUrlActual={ruta.wikiloc_url} teTrack={teTrack} />
@@ -113,7 +127,11 @@ export default async function CheckpointsPage({
           </>
         )}
 
-        <CheckpointForm routeId={id} bidireccional={ruta.bidireccional} />
+        <CheckpointForm
+          routeId={id}
+          bidireccional={ruta.bidireccional}
+          checkpointsExistents={checkpointsExistents}
+        />
 
       </div>
     </main>
