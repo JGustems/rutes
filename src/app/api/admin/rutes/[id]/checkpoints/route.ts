@@ -14,14 +14,12 @@ export async function POST(
 
     const { id: routeId } = await params;
 
+    const body = await req.json();
     const {
       nom, latitud, longitud, descripcio,
       ordreAnada, ordreTornada, esInici, esFi,
-    } = await req.json();
-
-    if (!nom?.trim() || latitud == null || longitud == null || ordreAnada == null) {
-      return NextResponse.json({ error: "Falten dades obligatòries" }, { status: 400 });
-    }
+      checkpointExistentId,
+    } = body;
 
     const rutes = await sql`select id, bidireccional from routes where id = ${routeId} limit 1`;
     const ruta = rutes[0];
@@ -36,12 +34,46 @@ export async function POST(
       );
     }
 
-    const checkpointResult = await sql`
-      insert into checkpoints (nom, descripcio, latitud, longitud)
-      values (${nom.trim()}, ${descripcio || null}, ${latitud}, ${longitud})
-      returning id
-    `;
-    const checkpointId = checkpointResult[0].id;
+    let checkpointId: string;
+
+    if (checkpointExistentId) {
+      // Reutilitzem un checkpoint ja existent
+      const existing = await sql`select id from checkpoints where id = ${checkpointExistentId} limit 1`;
+      if (!existing[0]) {
+        return NextResponse.json({ error: "Checkpoint no trobat" }, { status: 404 });
+      }
+
+      // Comprovem que no estigui ja assignat a aquesta ruta
+      const jaAssignat = await sql`
+        select id from route_checkpoints
+        where route_id = ${routeId} and checkpoint_id = ${checkpointExistentId}
+        limit 1
+      `;
+      if (jaAssignat[0]) {
+        return NextResponse.json(
+          { error: "Aquest checkpoint ja esta assignat a aquesta ruta" },
+          { status: 400 }
+        );
+      }
+
+      checkpointId = checkpointExistentId;
+    } else {
+      // Creem un checkpoint nou
+      if (!nom?.trim() || latitud == null || longitud == null || ordreAnada == null) {
+        return NextResponse.json({ error: "Falten dades obligatories" }, { status: 400 });
+      }
+
+      const checkpointResult = await sql`
+        insert into checkpoints (nom, descripcio, latitud, longitud)
+        values (${nom.trim()}, ${descripcio || null}, ${latitud}, ${longitud})
+        returning id
+      `;
+      checkpointId = checkpointResult[0].id;
+    }
+
+    if (ordreAnada == null) {
+      return NextResponse.json({ error: "Cal indicar l'ordre dins la ruta" }, { status: 400 });
+    }
 
     await sql`
       insert into route_checkpoints (route_id, checkpoint_id, sentit, ordre, es_inici, es_fi)
