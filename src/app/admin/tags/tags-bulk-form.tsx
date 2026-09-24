@@ -11,6 +11,70 @@ export default function TagsBulkForm() {
   const [carregant, setCarregant] = useState(false);
   const [error, setError] = useState("");
   const [resultat, setResultat] = useState<{ creats: number; duplicats: string[] } | null>(null);
+  const [escoltantNFC, setEscoltantNFC] = useState(false);
+  const [connectantBLE, setConnectantBLE] = useState(false);
+  const [missatgeDeteccio, setMissatgeDeteccio] = useState("");
+
+  const nfcDisponible = typeof window !== "undefined" && "NDEFReader" in window;
+
+  function afegirCodi(codi: string) {
+    const codiNet = codi.trim();
+    if (!codiNet) return;
+    setCodis((prev) => {
+      const llistaActual = prev.split("\n").map((c) => c.trim()).filter((c) => c.length > 0);
+      if (llistaActual.includes(codiNet)) {
+        setMissatgeDeteccio("Aquest codi ja és a la llista");
+        return prev;
+      }
+      setMissatgeDeteccio("Codi afegit: " + codiNet);
+      return prev ? prev + "\n" + codiNet : codiNet;
+    });
+  }
+
+  async function llegirNFC() {
+    if (!nfcDisponible) {
+      setError("NFC no disponible en aquest navegador");
+      return;
+    }
+    try {
+      setEscoltantNFC(true);
+      setMissatgeDeteccio("Acosta el tag NFC al mòbil...");
+      const reader = new (window as any).NDEFReader();
+      await reader.scan();
+      reader.onreading = (event: any) => {
+        const serialNumber = event.serialNumber as string;
+        if (serialNumber) {
+          afegirCodi(serialNumber);
+          setEscoltantNFC(false);
+        }
+      };
+    } catch {
+      setError("No s'ha pogut activar el lector NFC");
+      setEscoltantNFC(false);
+      setMissatgeDeteccio("");
+    }
+  }
+
+  async function llegirBLE() {
+    if (typeof navigator === "undefined" || !("bluetooth" in navigator)) {
+      setError("Bluetooth no disponible en aquest navegador");
+      return;
+    }
+    try {
+      setConnectantBLE(true);
+      setMissatgeDeteccio("Connectant dispositiu Bluetooth...");
+      const device = await (navigator as any).bluetooth.requestDevice({
+        acceptAllDevices: true,
+      });
+      const codi = device.name || device.id;
+      if (codi) afegirCodi(codi);
+    } catch {
+      setError("No s'ha pogut connectar cap dispositiu Bluetooth");
+    } finally {
+      setConnectantBLE(false);
+      setMissatgeDeteccio("");
+    }
+  }
 
   async function handleSubmit() {
     setError("");
@@ -39,12 +103,16 @@ export default function TagsBulkForm() {
 
     setResultat({ creats: data.creats, duplicats: data.duplicats ?? [] });
     setCodis("");
+    setMissatgeDeteccio("");
     router.refresh();
   }
 
   return (
     <div className="bg-superficie border border-vora rounded-card p-6">
-      <button onClick={() => setOberta(!oberta)} className="w-full flex items-center justify-between text-sm font-medium text-text-principal">
+      <button
+        onClick={() => setOberta(!oberta)}
+        className="w-full flex items-center justify-between text-sm font-medium text-text-principal"
+      >
         <span>+ Afegir tags (un o varis de cop)</span>
         <span className="text-text-secundari">{oberta ? "−" : "+"}</span>
       </button>
@@ -54,17 +122,51 @@ export default function TagsBulkForm() {
           <div>
             <label className="text-xs font-medium text-text-secundari block mb-1">Tipus</label>
             <div className="flex gap-2">
-              <button onClick={() => setTipus("nfc")} className={`flex-1 text-sm py-2 rounded-lg border transition-colors ${tipus === "nfc" ? "bg-pi text-white border-pi" : "border-vora text-text-secundari"}`}>
+              <button
+                onClick={() => setTipus("nfc")}
+                className={`flex-1 text-sm py-2 rounded-lg border transition-colors ${tipus === "nfc" ? "bg-pi text-white border-pi" : "border-vora text-text-secundari"}`}
+              >
                 NFC
               </button>
-              <button onClick={() => setTipus("ble")} className={`flex-1 text-sm py-2 rounded-lg border transition-colors ${tipus === "ble" ? "bg-cel text-white border-cel" : "border-vora text-text-secundari"}`}>
+              <button
+                onClick={() => setTipus("ble")}
+                className={`flex-1 text-sm py-2 rounded-lg border transition-colors ${tipus === "ble" ? "bg-cel text-white border-cel" : "border-vora text-text-secundari"}`}
+              >
                 BLE
               </button>
             </div>
           </div>
 
+          {/* Lectura directa amb NFC o BLE */}
           <div>
-            <label className="text-xs font-medium text-text-secundari block mb-1">Codis (un per línia)</label>
+            <label className="text-xs font-medium text-text-secundari block mb-2">
+              Llegir tag directament
+            </label>
+            <div className="flex gap-2">
+              <button
+                onClick={llegirNFC}
+                disabled={escoltantNFC || !nfcDisponible}
+                className="flex-1 bg-pi text-white text-sm py-2 rounded-lg hover:bg-pi-fosc transition-colors disabled:opacity-40"
+              >
+                {escoltantNFC ? "Escoltant..." : "Llegir NFC"}
+              </button>
+              <button
+                onClick={llegirBLE}
+                disabled={connectantBLE}
+                className="flex-1 bg-cel text-white text-sm py-2 rounded-lg hover:bg-cel-fosc transition-colors disabled:opacity-40"
+              >
+                {connectantBLE ? "Connectant..." : "Llegir BLE"}
+              </button>
+            </div>
+            {missatgeDeteccio && (
+              <p className="text-xs text-pi mt-2">{missatgeDeteccio}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-text-secundari block mb-1">
+              Codis (un per línia — o afegits des dels botons de dalt)
+            </label>
             <textarea
               value={codis}
               onChange={(e) => setCodis(e.target.value)}
@@ -77,18 +179,26 @@ export default function TagsBulkForm() {
             </p>
           </div>
 
-          {error && (<p className="text-xs text-alerta bg-alerta-clar px-3 py-2 rounded-lg">{error}</p>)}
+          {error && (
+            <p className="text-xs text-alerta bg-alerta-clar px-3 py-2 rounded-lg">{error}</p>
+          )}
 
           {resultat && (
             <div className="text-xs bg-exit-clar text-exit-fosc px-3 py-2 rounded-lg">
               <p>{resultat.creats} tags creats correctament.</p>
               {resultat.duplicats.length > 0 && (
-                <p className="mt-1">Codis ja existents (ignorats): {resultat.duplicats.join(", ")}</p>
+                <p className="mt-1">
+                  Codis ja existents (ignorats): {resultat.duplicats.join(", ")}
+                </p>
               )}
             </div>
           )}
 
-          <button onClick={handleSubmit} disabled={carregant} className="w-full bg-terra text-white rounded-lg py-2.5 text-sm font-medium hover:bg-terra-fosc transition-colors disabled:opacity-50">
+          <button
+            onClick={handleSubmit}
+            disabled={carregant}
+            className="w-full bg-terra text-white rounded-lg py-2.5 text-sm font-medium hover:bg-terra-fosc transition-colors disabled:opacity-50"
+          >
             {carregant ? "Afegint..." : "Afegir tags"}
           </button>
         </div>
